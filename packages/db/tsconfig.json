@@ -1,0 +1,9 @@
+{
+	"extends": "@repo/tsconfig/pkg",
+	"compilerOptions": {
+		"rootDir": "./src",
+		"outDir": "./dist"
+	},
+	"include": ["src/**/*"],
+	"exclude": ["drizzle.config.ts", "src/seed.ts", "src/seed-exam-content.ts"]
+}

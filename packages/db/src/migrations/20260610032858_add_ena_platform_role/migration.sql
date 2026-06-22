@@ -1,0 +1,2 @@
+-- B01: users.platform_role is a typed text column with no database CHECK constraint.
+-- The ena role is represented in TypeScript schema only; no physical migration is required.

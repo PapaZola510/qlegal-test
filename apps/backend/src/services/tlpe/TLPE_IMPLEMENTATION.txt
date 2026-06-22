@@ -1,0 +1,73 @@
+AltPayNet TLPE — meeting session + CTC payments (Dynamic Easy Payment Link)
+=============================================================================
+
+Docs: https://developers.tlpe.io/
+
+Provider switch
+---------------
+Meeting payments use MEETING_PAYMENT_PROVIDER (default: tlpe).
+
+  MEETING_PAYMENT_PROVIDER=tlpe   # AltPayNet TLPE (production default)
+  MEETING_PAYMENT_PROVIDER=hitpay # Roll back to HitPay without code changes
+
+Restart the API after changing the provider.
+
+Environment (apps/backend/.env)
+-------------------------------
+TLPE_AUTHORIZATION=        # Integrator token (Authorization header + Easy Link `key`)
+TLPE_SECRET=               # RSA private key (PKCS#8) or HMAC secret for JWT signing
+TLPE_API_URL=              # https://test-api.tlpe.io (test) or https://api.tlpe.io (live)
+TLPE_PAYMENT_LINK_URL=     # Required — dynamic Easy Payment Link URL from AltPayNet
+TLPE_PAYMENT_OPTION_CODE=  # Optional — pre-select a brand from GET /options on EPL
+TLPE_CALLBACK_URL=         # Optional redirect after hosted payment
+
+All four TLPE_* credentials above (including TLPE_PAYMENT_LINK_URL) must be set for
+meeting and CTC online payments. Checkout (POST /checkout) is not used.
+
+Fee breakdown env vars still use MEETING_HITPAY_QRPH_FEE_* names (processing fee estimate).
+
+Flow
+----
+1. Client starts payment → payment_intents row (provider=tlpe, pending).
+2. Backend POSTs to TLPE_PAYMENT_LINK_URL with amount, reference, customer, fees.
+3. AltPayNet returns a unique `link` per transaction; stored as metadata.checkoutUrl.
+4. Client opens hosted page (e.g. Open in Maya, QR Ph).
+5. TLPE POST notify → POST /api/v1/payments/tlpe/webhook
+   Docs: https://developers.tlpe.io/post-notify-payment-result/
+   - Header: Authorization (integrator token, must match TLPE_AUTHORIZATION)
+   - Body: application/json { "payload": "<JWT>" } signed HS256 with TLPE_SECRET
+   - Verify signature + exp before updating payment_intents (never save unverified data)
+6. Fallback: POST /sync on status poll while unpaid.
+
+Webhook registration (AltPayNet)
+--------------------------------
+  POST https://<api-host>/api/v1/payments/tlpe/webhook
+
+Also whitelist server egress IP per AltPayNet API reference.
+
+Code layout
+-----------
+  apps/backend/src/services/tlpe/
+    tlpe.client.ts
+    tlpe-jwt.ts
+    tlpe-easy-payment-link.ts
+    tlpe-customer-mapper.ts
+    tlpe-sync.ts
+    tlpe-notify.ts
+    tlpe.service.ts
+    tlpe.module.ts
+
+  apps/backend/src/modules/v1/appointments/lib/meeting-payment-provider.ts
+
+Tests:
+  tlpe-payload.spec.ts       — transaction body, JWT envelopes, EPL body
+  tlpe-options.spec.ts       — GET /options brand selection (QR Ph preference)
+  tlpe-integrations.spec.ts  — Easy Payment Link flows
+  tlpe-sync.spec.ts          — POST /sync status parsing
+  tlpe-jwt.spec.ts           — HS256/RS256 signing
+  tlpe-notify.spec.ts        — webhook JWT parsing
+
+Rollback to HitPay
+------------------
+Set MEETING_PAYMENT_PROVIDER=hitpay and configure HITPAY_* (see HITPAY_IMPLEMENTATION.txt).
+In-flight HitPay intents still complete via /api/v1/payments/hitpay/webhook.

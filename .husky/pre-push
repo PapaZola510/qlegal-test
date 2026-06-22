@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Husky v9 invokes hooks via `sh -e` regardless of shebang. Re-exec under bash
+# so we can use bash-only features (set -o pipefail, [[ ]], &>, case).
+if [ -z "${BASH_VERSION:-}" ]; then
+	exec bash "$0" "$@"
+fi
+set -euo pipefail
+
+# Git GUI apps and non-login shells often run hooks without Node on PATH.
+# Bootstrap common locations before invoking Turborepo.
+
+case "$(uname -s)" in
+Darwin)
+	if [[ -x /opt/homebrew/bin/brew ]]; then
+		eval "$(/opt/homebrew/bin/brew shellenv)"
+	elif [[ -x /usr/local/bin/brew ]]; then
+		eval "$(/usr/local/bin/brew shellenv)"
+	fi
+	;;
+esac
+
+if [[ -s "${HOME}/.nvm/nvm.sh" ]]; then
+	# shellcheck disable=SC1090
+	. "${HOME}/.nvm/nvm.sh"
+fi
+
+if command -v fnm &>/dev/null; then
+	eval "$(fnm env)"
+fi
+
+if [[ -s "${HOME}/.asdf/asdf.sh" ]]; then
+	# shellcheck disable=SC1090
+	. "${HOME}/.asdf/asdf.sh"
+fi
+
+export PATH="${VOLTA_HOME:-${HOME}/.volta}/bin:${PATH}"
+
+pnpm_home="${PNPM_HOME:-${HOME}/Library/pnpm}"
+if [[ -d "${pnpm_home}" ]]; then
+	export PNPM_HOME="${pnpm_home}"
+	export PATH="${PNPM_HOME}:${PATH}"
+fi
+
+if ! command -v node &>/dev/null; then
+	echo "husky(pre-push): 'node' not found. Push from a terminal where \`node -v\` works, or install Node (e.g. Homebrew, nvm, Volta)." >&2
+	exit 1
+fi
+
+if ! command -v pnpm &>/dev/null; then
+	echo "husky(pre-push): 'pnpm' not found. Install pnpm (https://pnpm.io/installation) or ensure it is on PATH." >&2
+	exit 1
+fi
+
+cd "$(git rev-parse --show-toplevel)"
+
+pnpm exec turbo test --filter='!@repo/mobile'

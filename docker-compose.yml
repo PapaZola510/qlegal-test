@@ -1,0 +1,82 @@
+# ==========================================================
+# TURBOREPO DEVELOPMENT ENVIRONMENT
+# ==========================================================
+# This Docker Compose configuration sets up the full application stack
+# for local development with both web and backend services.
+#
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose down                # Stop and remove containers
+#   docker-compose logs -f            # Follow logs
+# ==========================================================
+
+services:
+  # ----------------------------------------------------------
+  # Web Application (Next.js)
+  # ----------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Build-time arguments for Next.js (inlined during build)
+        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+        - NEXT_PUBLIC_API_VERSION=${NEXT_PUBLIC_API_VERSION}
+        - NEXT_PUBLIC_ENABLE_LMS_INTEGRATION=${NEXT_PUBLIC_ENABLE_LMS_INTEGRATION:-true}
+    container_name: turbo-template-web
+    ports:
+      - "3001:3001"
+    environment:
+      # Server Configuration
+      - NODE_ENV=production
+
+      # Public URLs (Client-side accessible)
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+      - NEXT_PUBLIC_API_VERSION=${NEXT_PUBLIC_API_VERSION}
+    env_file:
+      - apps/web/.env
+    networks:
+      - app-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # Backend API (NestJS)
+  # ----------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: turbo-template-backend
+    ports:
+      - "3000:3000"
+    environment:
+      # Server Configuration
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - apps/backend/.env
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/v1/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,258 @@
+================================================================================
+HITPAY IMPLEMENTATION — Q-Legal New (Meeting Session QRPH)
+================================================================================
+Last updated: 2026-05-29
+Scope: Meeting document fees paid via HitPay QRPH before ending/leaving a session.
+       (Separate from exam_retake payments and the generic gateway webhook.)
+
+Provider switch (2026-06): Default meeting provider is TLPE (MEETING_PAYMENT_PROVIDER=tlpe).
+  Set MEETING_PAYMENT_PROVIDER=hitpay to use this integration without removing TLPE code.
+  See apps/backend/src/services/tlpe/TLPE_IMPLEMENTATION.txt
+
+================================================================================
+1. OVERVIEW
+================================================================================
+
+Flow:
+  1. ENP uploads meeting documents with a fee (fee_php per document).
+  2. Client sees total session fees in the meeting Payment tab.
+  3. Client taps "Show QRPH QR" → backend creates HitPay payment request + DB row.
+  4. Client pays via QRPH (embedded QR payload or HitPay hosted checkout URL).
+  5. HitPay sends webhook → backend marks payment_intents succeeded.
+  6. Client and ENP can leave / ENP can end session (gated until paid, if total > 0).
+
+Money destination:
+  Funds go to the HitPay merchant account linked to HITPAY_API_KEY in
+  apps/backend/.env (e.g. production = Quanby Solutions Inc). NOT to the ENP.
+
+================================================================================
+2. ENVIRONMENT VARIABLES (apps/backend/.env)
+================================================================================
+
+Required for meeting payments:
+
+  HITPAY_API_KEY       Business API key (test_* = sandbox, live_* = production)
+  HITPAY_API_URL       https://api.sandbox.hit-pay.com  OR  https://api.hit-pay.com
+  HITPAY_WEBHOOK_SALT  Salt from HitPay Dashboard → API (webhook HMAC verification)
+
+Notes:
+  - Only apps/backend/.env is used (not apps/web/.env).
+  - Nest appends /v1 to HITPAY_API_URL in code (hitpay.client.ts).
+  - Sandbox: hosted QRPH Pay often fails with "Unknown error"; use simulate endpoint
+    in dev or production keys for real charges.
+  - Register webhook in HitPay Dashboard (production vs sandbox must match keys):
+      POST https://<public-api-host>/api/v1/payments/hitpay/webhook
+      Event: payment_request.completed
+
+See also: apps/backend/.env.example (comments)
+
+================================================================================
+3. BACKEND FILE MAP
+================================================================================
+
+HitPay service layer (apps/backend/src/services/hitpay/):
+  hitpay.client.ts           API base URL, headers, hitpayConfigured(), sandbox helpers
+  hitpay-payment-request.ts  POST /payment-requests (QRPH, form-urlencoded)
+  hitpay-webhook-crypto.ts   HMAC-SHA256 signature compute/verify (no env import)
+  hitpay-webhook.ts          assertHitpayWebhookSignature()
+  hitpay.service.ts          Injectable wrapper (Nest)
+  hitpay.module.ts           Nest module export
+  hitpay-webhook.spec.ts     Unit test for webhook crypto only
+
+Appointments (business logic):
+  appointments.service.ts    Fee total, payment status, create/cancel/simulate payment,
+                             gate updateStatus(ended), invalidate on fee changes
+  appointments.controller.ts oRPC handlers for meeting-payment routes
+  appointments.module.ts     imports HitpayModule
+
+Payments (webhook):
+  payment-hitpay-webhook.controller.ts  POST /api/v1/payments/hitpay/webhook
+  payment-hitpay-webhook.service.ts     Verify signature, update payment_intents, WS emit
+  payments.module.ts                    imports HitpayModule, EventsModule
+
+Config:
+  env.config.ts              HITPAY_API_KEY, HITPAY_API_URL, HITPAY_WEBHOOK_SALT (optional)
+
+Contracts (packages/contracts/):
+  appointments.schema.ts     MeetingPaymentStatusSchema, CreateMeetingPaymentResultSchema
+  appointments.contract.ts   getMeetingPaymentStatus, createMeetingPayment,
+                             simulateMeetingPayment
+
+Database (packages/db/):
+  schema.ts                  payment_intents (purpose meeting_session, provider hitpay,
+                             appointment_id FK), appointment_documents.fee_php
+  migrations/
+    20260528150000_appointment_document_fee   fee_php on appointment_documents
+    20260529120000_meeting_session_payment    appointment_id on payment_intents
+
+Frontend (apps/web/):
+  meeting-payment-panel.tsx           QR display, create/simulate payment UI
+  meeting.hooks.ts                  useMeetingPaymentStatusQuery, useCreateMeetingPaymentMutation,
+                                    useSimulateMeetingPaymentMutation
+  appointment-meeting-content.tsx   Payment tab, gates End session / Leave, WS refetch
+  ws-client.ts                      appointments:payment-updated event type
+
+================================================================================
+4. API ENDPOINTS (oRPC / OpenAPI)
+================================================================================
+
+All under authenticated session unless noted.
+
+  GET  /api/v1/appointments/{id}/meeting-payment
+       Returns: totalFeePhp, paid, qrCode, checkoutUrl, qrStale, sandboxTestMode, etc.
+       Who: client or ENP with appointment access
+
+  POST /api/v1/appointments/{id}/meeting-payment
+       Creates HitPay payment request; cancels prior pending/processing intents.
+       Who: appointment client only; appointment must be in_session
+
+  POST /api/v1/appointments/{id}/meeting-payment/simulate
+       Dev only: NODE_ENV=development AND HITPAY_API_URL contains "sandbox"
+       Marks payment succeeded without HitPay charge
+
+  POST /api/v1/payments/hitpay/webhook  (anonymous)
+       HitPay callback; raw body + Hitpay-Signature header required
+
+================================================================================
+5. FEE TOTAL CALCULATION
+================================================================================
+
+  computeMeetingSessionFeeTotal(appointmentId)
+    - Sums appointment_documents.fee_php for non-deleted appointment_attachment files
+    - If total <= 0: payment not required (meeting can end without QRPH)
+
+  ENP updates fee:
+    updateMeetingDocumentFee → invalidates stale payment intents (see section 8)
+
+================================================================================
+6. CREATE PAYMENT (createMeetingPayment)
+================================================================================
+
+Steps:
+  1. Verify caller is client; appointment status = in_session
+  2. Compute totalFeePhp from documents
+  3. If already succeeded intent → return that status
+  4. Cancel all pending/processing meeting_session intents for this appointment
+  5. Insert payment_intents row (status pending, provider hitpay, amount = total)
+  6. Call HitPay POST /v1/payment-requests:
+       - currency: php
+       - payment_methods[]: qrph_netbank
+       - generate_qr: true (fallback: false if HitPay returns 500)
+       - reference_number: payment intent id (used to match webhook)
+       - email: client email or meeting-payments@qlegal.local
+  7. Update intent → processing; store metadata: qrCode, checkoutUrl, hitpayStatus
+  8. Return MeetingPaymentStatus + paymentIntentId
+
+HitPay request format:
+  application/x-www-form-urlencoded (not JSON)
+  Header: X-BUSINESS-API-KEY, X-Requested-With: XMLHttpRequest
+
+QR display:
+  - Prefer embedded qr_code from HitPay response
+  - Else use hosted checkout URL as scannable QR (QuickChart on frontend)
+
+================================================================================
+7. WEBHOOK (payment-hitpay-webhook.service)
+================================================================================
+
+  URL:     POST /api/v1/payments/hitpay/webhook
+  Auth:    Hitpay-Signature = HMAC-SHA256(raw JSON body, HITPAY_WEBHOOK_SALT)
+  Event:   status === "completed" (others ignored)
+
+  IMPORTANT: Local dev (localhost) cannot receive HitPay webhooks unless you expose
+  the API via ngrok and register that URL in the HitPay dashboard. Payment requests
+  created via API often have webhook: null unless configured in the dashboard.
+
+  FALLBACK SYNC: getMeetingPaymentStatus polls HitPay GET /payment-requests/{id}
+  when a meeting_session intent is pending/processing with externalId. If HitPay
+  reports status completed, the intent is marked succeeded (same as webhook).
+  The web UI refetches payment status every 4 seconds while unpaid.
+
+  Lookup payment intent by:
+    1. payload.reference_number (our payment_intents.id)
+    2. else payload.id (HitPay payment request id → payment_intents.external_id)
+
+  On success:
+    - Update payment_intents → succeeded, paidAt
+    - WebSocket: appointments:payment-updated { appointmentId, status: "succeeded" }
+      to client and ENP user ids
+
+================================================================================
+8. STALE QR WHEN FEES CHANGE
+================================================================================
+
+When document fees change (updateMeetingDocumentFee, linkMeetingDocument, deleteMeetingDocument):
+  - If active intent amount != new totalFeePhp:
+    - Cancel pending/processing meeting_session intents
+    - Emit appointments:payment-updated { status: "refresh" }
+  - getMeetingPaymentStatus sets qrStale=true and hides old qrCode/checkoutUrl
+  - Client must tap "Update QRPH QR" to create new HitPay request at new amount
+
+Frontend invalidates getMeetingPaymentStatus query on fee mutations.
+
+================================================================================
+9. SESSION GATES (appointment-meeting-content.tsx)
+================================================================================
+
+  paymentBlocked = required && !paid
+
+  If total fees > 0 and not paid:
+    - Client: cannot Leave until paid
+    - ENP: cannot End session until client paid
+    - Guests: not blocked by payment
+
+  assertMeetingPaymentCompleteForEnd(appointmentId) called when ENP sets status ended
+
+  If total <= 0: gates skipped (no payment required)
+
+================================================================================
+10. SANDBOX VS PRODUCTION
+================================================================================
+
+  Sandbox (api.sandbox.hit-pay.com + test_ API key):
+    - UI shows "Mark paid (sandbox test)" instead of relying on HitPay checkout
+    - simulateMeetingPayment endpoint enabled in development
+    - Hosted checkout QRPH/GCash Pay often returns 500 / Unknown error (HitPay limitation)
+
+  Production (api.hit-pay.com + live_ API key):
+    - Real PHP charges
+    - Merchant name on checkout = HitPay business for that key
+    - Webhook must be registered on production dashboard with production salt
+
+================================================================================
+11. RELATED BUT SEPARATE PAYMENT PATHS
+================================================================================
+
+  POST /api/v1/payments/gateway/webhook
+    - Generic dev/stub gateway (PAYMENT_WEBHOOK_SECRET)
+    - Used for exam_retake and can mark meeting_session if intentId sent manually
+    - Not HitPay
+
+  packages/contracts payments module
+    - Other payment flows (not meeting HitPay)
+
+================================================================================
+12. BUILD / DEV NOTES
+================================================================================
+
+  - Build contracts after schema changes: pnpm --filter @repo/contracts build
+  - Backend dev depends on ^build for contracts (turbo)
+  - Web proxies /api and /socket.io to Nest via BACKEND_PROXY_ORIGIN (apps/web/.env)
+  - HitPay webhook needs raw body on request (for signature verification)
+
+================================================================================
+13. QUICK TEST CHECKLIST
+================================================================================
+
+  [ ] HITPAY_* set in apps/backend/.env; restart backend
+  [ ] Webhook URL registered in HitPay dashboard (ngrok or deployed API)
+  [ ] Meeting in_session with document fees > 0
+  [ ] Client: Show/Update QRPH QR → pay
+  [ ] payment_intents.status = succeeded; UI shows paid
+  [ ] ENP can end session; client can leave
+
+  Sandbox shortcut: Mark paid (sandbox test) on Payment tab (dev only)
+
+================================================================================
+END
+================================================================================

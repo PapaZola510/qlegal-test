@@ -1,0 +1,91 @@
+# ==========================================================
+# PRODUCTION DEPLOYMENT - EC2 behind ALB (ASG)
+# ==========================================================
+# Runs web (port 3001) and backend (port 3000) containers.
+# ALB handles subdomain routing + SSL termination.
+# Containers bind to 0.0.0.0 so ALB health checks can reach them.
+#
+# Each app gets its own subdomain via ALB host-header rules:
+#   - turbo.quanbyit.com      → web:3001
+#   - turbo-be.quanbyit.com   → backend:3000
+#
+# This file is stored in SSM Parameter Store (base64) and
+# pulled by EC2 instances on boot via the deploy script.
+# ==========================================================
+
+services:
+  # ----------------------------------------------------------
+  # Web Application (Next.js)
+  # ----------------------------------------------------------
+  web:
+    image: ${ECR_REGISTRY}/${ECR_REPOSITORY_WEB}:${IMAGE_TAG:-latest}
+    container_name: production-web
+    ports:
+      - "0.0.0.0:3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - INTERNAL_API_BASE_URL=http://backend:3000/api
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+      - NEXT_PUBLIC_API_VERSION=${NEXT_PUBLIC_API_VERSION}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # Backend API (NestJS)
+  # ----------------------------------------------------------
+  backend:
+    image: ${ECR_REGISTRY}/${ECR_REPOSITORY_BACKEND}:${IMAGE_TAG:-latest}
+    container_name: production-backend
+    ports:
+      - "0.0.0.0:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+      - BETTER_AUTH_TRUSTED_ORIGINS=${BETTER_AUTH_TRUSTED_ORIGINS}
+      - BETTER_AUTH_COOKIE_DOMAIN=${BETTER_AUTH_COOKIE_DOMAIN}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      # Lobby location verification (reverse geocoding)
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - PROXYCHECK_API_KEY=${PROXYCHECK_API_KEY}
+      # DocOnChain QuickSign — meeting notarized PDF proxy + vault access
+      - DOCONCHAIN_API_URL=${DOCONCHAIN_API_URL}
+      - DOCONCHAIN_APP_URL=${DOCONCHAIN_APP_URL}
+      - DOCONCHAIN_CLIENT_KEY=${DOCONCHAIN_CLIENT_KEY}
+      - DOCONCHAIN_CLIENT_SECRET=${DOCONCHAIN_CLIENT_SECRET}
+      - DOCONCHAIN_ORG_EMAIL=${DOCONCHAIN_ORG_EMAIL}
+      - DOCONCHAIN_ORGANIZATION_ID=${DOCONCHAIN_ORGANIZATION_ID}
+      - DOCONCHAIN_API_TOKEN=${DOCONCHAIN_API_TOKEN:-}
+      - DOCONCHAIN_FORCE_GENERATED_TOKEN=${DOCONCHAIN_FORCE_GENERATED_TOKEN:-false}
+      - DOCONCHAIN_VERBOSE_LOGS=${DOCONCHAIN_VERBOSE_LOGS:-false}
+      # AltPayNet TLPE meeting payments (live API; whitelist production EC2 egress IP with AltPayNet)
+      - MEETING_PAYMENT_PROVIDER=${MEETING_PAYMENT_PROVIDER:-tlpe}
+      - TLPE_AUTHORIZATION=${TLPE_AUTHORIZATION}
+      - TLPE_SECRET=${TLPE_SECRET}
+      - TLPE_API_URL=${TLPE_API_URL:-https://api.tlpe.io}
+      - TLPE_PAYMENT_LINK_URL=${TLPE_PAYMENT_LINK_URL:-}
+      - TLPE_PAYMENT_OPTION_CODE=${TLPE_PAYMENT_OPTION_CODE:-}
+      - TLPE_CALLBACK_URL=${TLPE_CALLBACK_URL:-https://qlegal.quanbyit.com/appointments}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/v1/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped

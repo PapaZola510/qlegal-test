@@ -1,0 +1,56 @@
+name: Deploy Staging (VPS)
+
+on:
+  push:
+    branches:
+      - staging
+    paths-ignore:
+      - "**/*.md"
+      - ".vscode/**"
+      - "docs/**"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  deploy:
+    name: Deploy to Staging VPS
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 20
+    steps:
+      - name: Trigger deploy on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_SSH_HOST }}
+          username: ${{ secrets.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            /root/deploy-staging.sh
+
+      - name: Health check
+        if: ${{ env.STAGING_HEALTH_URL != '' }}
+        env:
+          STAGING_HEALTH_URL: ${{ vars.STAGING_HEALTH_URL }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS --max-time 10 "$STAGING_HEALTH_URL"; then
+              echo "Health check OK"
+              exit 0
+            fi
+            echo "Health check attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Health check failed after 6 attempts"
+          exit 1

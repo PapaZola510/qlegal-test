@@ -1,0 +1,8 @@
+{
+	"extends": "@repo/tsconfig/pkg",
+	"compilerOptions": {
+		"rootDir": "./src",
+		"outDir": "./dist"
+	},
+	"include": ["src/**/*"]
+}

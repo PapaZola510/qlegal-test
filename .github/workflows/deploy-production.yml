@@ -1,0 +1,56 @@
+name: Deploy Production (VPS)
+
+on:
+  push:
+    branches:
+      - production
+    paths-ignore:
+      - "**/*.md"
+      - ".vscode/**"
+      - "docs/**"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  deploy:
+    name: Deploy to Production VPS
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 25
+    steps:
+      - name: Trigger deploy on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_SSH_HOST }}
+          username: ${{ secrets.VPS_SSH_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          command_timeout: 25m
+          script: |
+            set -euo pipefail
+            /root/deploy-prod.sh
+
+      - name: Health check
+        if: ${{ env.PRODUCTION_HEALTH_URL != '' }}
+        env:
+          PRODUCTION_HEALTH_URL: ${{ vars.PRODUCTION_HEALTH_URL }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS --max-time 10 "$PRODUCTION_HEALTH_URL"; then
+              echo "Health check OK"
+              exit 0
+            fi
+            echo "Health check attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Health check failed after 6 attempts"
+          exit 1

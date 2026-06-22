@@ -1,0 +1,71 @@
+import { Logger, VersioningType, type INestApplication } from "@nestjs/common"
+import { NestFactory } from "@nestjs/core"
+import { IoAdapter } from "@nestjs/platform-socket.io"
+
+import { AppModule } from "@/app.module"
+import { configureAppWithOptions, configureCors } from "@/config/app.config"
+import { setupBetterAuth } from "@/config/auth.config"
+import { env } from "@/config/env.config"
+import { setupSwagger } from "@/config/swagger.config"
+
+const logger = new Logger("Bootstrap")
+
+/**
+ * Configure URI-based API versioning (e.g., /api/v1/*, /api/v2/*)
+ */
+function setupVersioning(app: INestApplication): void {
+	app.setGlobalPrefix("api")
+	app.enableVersioning({ type: VersioningType.URI })
+	logger.log("URI-based API versioning enabled")
+}
+
+/**
+ * Create and configure the NestJS application
+ */
+async function createApplication(): Promise<INestApplication> {
+	logger.log("Creating NestJS application...")
+	const app = await NestFactory.create(AppModule, { bodyParser: false })
+	app.useWebSocketAdapter(new IoAdapter(app))
+	configureCors(app)
+
+	// IMPORTANT: Better Auth must be registered BEFORE express.json() body parser.
+	// Better Auth's toNodeHandler reads the raw request stream for body parsing.
+	// If express.json() runs first, it consumes the stream and Better Auth sees
+	// an empty body → sign-in/sign-up return null.
+	setupBetterAuth(app)
+	configureAppWithOptions(app, { skipCors: true })
+	setupVersioning(app)
+	await setupSwagger(app)
+
+	// Honor X-Forwarded-For / X-Real-IP from Next.js and edge proxies when resolving req.ip.
+	const expressApp = app.getHttpAdapter().getInstance() as {
+		set?: (key: string, value: unknown) => void
+	}
+	expressApp.set?.("trust proxy", true)
+
+	return app
+}
+
+/**
+ * Start the application listener
+ */
+async function startApplication(app: INestApplication): Promise<void> {
+	const port = env.PORT
+	await app.listen(port)
+
+	logger.log(`Application is running on: http://localhost:${port}`)
+	logger.log(`Environment: ${env.NODE_ENV}`)
+}
+
+/**
+ * Bootstrap the application
+ */
+export async function bootstrap(): Promise<void> {
+	try {
+		const app = await createApplication()
+		await startApplication(app)
+	} catch (error) {
+		logger.error("Failed to bootstrap application", error)
+		process.exit(1)
+	}
+}

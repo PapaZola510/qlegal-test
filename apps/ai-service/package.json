@@ -1,0 +1,14 @@
+{
+	"name": "@repo/ai-service",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"build": "echo \"ai-service: no build\"",
+		"dev": "uvicorn app.main:app --reload --host 0.0.0.0 --port 8010",
+		"start": "uvicorn app.main:app --host 0.0.0.0 --port 8010",
+		"lint": "echo \"ai-service: python — use ruff locally if needed\"",
+		"typecheck": "echo \"ai-service: no tsc\"",
+		"format": "echo \"ai-service: use black/ruff locally\"",
+		"clean": "echo \"ai-service: nothing to clean\""
+	}
+}
