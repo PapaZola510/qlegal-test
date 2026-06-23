@@ -155,3 +155,4 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 /CLAUDE.md.bak
 # END Ruler Generated Files
 .worktrees/
+apps/backend/.storage/ 

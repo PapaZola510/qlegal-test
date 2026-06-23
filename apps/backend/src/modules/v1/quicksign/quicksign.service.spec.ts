@@ -235,7 +235,9 @@ const completedProject = {
 }
 
 function createService() {
-	const files = {}
+	const files = {
+		readStoredFileBuffer: jest.fn().mockResolvedValue(Buffer.from("fake-pdf")),
+	}
 	const dc = {
 		getAccessToken: jest.fn().mockResolvedValue("token"),
 		addSigner: jest.fn().mockResolvedValue(undefined),
@@ -264,6 +266,12 @@ function createService() {
 	const enpDocumentTypes = {
 		resolveAndValidateSelection: jest.fn(),
 	}
+	const localSigning = {
+		stampSignature: jest.fn().mockResolvedValue(undefined),
+	}
+	const localStorageService = {
+		savePdf: jest.fn().mockResolvedValue(undefined),
+	}
 
 	const service = new QuicksignService(
 		files as never,
@@ -276,7 +284,9 @@ function createService() {
 		registry as never,
 		notarizedPdfDelivery as never,
 		ienAttestation as never,
-		enpDocumentTypes as never
+		enpDocumentTypes as never,
+		localSigning as never,
+		localStorageService as never,
 	)
 
 	jest.spyOn(service as any, "assertEnp").mockResolvedValue(ctx)
@@ -375,6 +385,9 @@ function mockSelectRows(rows: unknown[]) {
 describe("QuicksignService", () => {
 	beforeEach(() => {
 		jest.clearAllMocks()
+		mockDb.insert.mockReset()
+		mockDb.update.mockReset()
+		mockDb.select.mockReset()
 	})
 
 	describe("create", () => {
@@ -420,9 +433,6 @@ describe("QuicksignService", () => {
 				enpId: "enp-1",
 				documentTypeIds: ["dt-1", "dt-2"],
 			})
-			expect(doconchainProvision.createProjectUuidFromPdfFile).toHaveBeenCalledWith(
-				expect.objectContaining({ fileObjectId: "file-1", documentName: "Document" })
-			)
 			expect(documentTypeInsert.values).toHaveBeenCalledWith([
 				expect.objectContaining({
 					projectId: "qs-1",
@@ -435,13 +445,6 @@ describe("QuicksignService", () => {
 					pricePhpSnapshot: 400,
 				}),
 			])
-			expect(dc.addSigner).toHaveBeenCalledWith(
-				expect.objectContaining({
-					projectUuid: "dc-1",
-					email: "client@example.com",
-					sequence: 1,
-				})
-			)
 			expect(signerInsert.values).toHaveBeenCalledWith(
 				expect.objectContaining({
 					projectId: "qs-1",
