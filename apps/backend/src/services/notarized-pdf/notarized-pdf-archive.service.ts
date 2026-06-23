@@ -193,10 +193,17 @@ export class NotarizedPdfArchiveService {
 
 		const projectUuid = row?.doconchainProjectUuid?.trim()
 		if (!row || !projectUuid) {
+			if (row?.notarizedFileObjectId?.trim()) {
+				await this.files.pipeStoredFileToResponse(row.notarizedFileObjectId, res, {
+					download: opts?.download === true,
+					filename: "notarized-document.pdf",
+				})
+				return
+			}
 			throw new HttpException(
 				{
-					message: "DocOnChain project is required for this notarized document.",
-					error: { code: "BAD_REQUEST", message: "DocOnChain project is required." },
+					message: "Notarized PDF is not available yet.",
+					error: { code: "BAD_REQUEST", message: "Notarized PDF is not available yet." },
 				},
 				400
 			)

@@ -28,8 +28,8 @@ export class LocalSigningService {
 		}
 
 		const fields = row.signatureFields ?? []
-		const field = fields.find(f => f.signerEmail === signerEmail)
-		if (!field) {
+		const matches = fields.filter(f => f.signerEmail === signerEmail)
+		if (matches.length === 0) {
 			throw new Error(
 				`No signature field found for signer ${signerEmail} in project ${projectUuid}`
 			)
@@ -43,19 +43,17 @@ export class LocalSigningService {
 		const pngImage = await doc.embedPng(pngBytes)
 
 		const pages = doc.getPages()
-		const page = pages[field.pageIndex]
-		if (!page) {
-			throw new Error(
-				`Page index ${field.pageIndex} out of bounds (document has ${pages.length} pages)`
-			)
-		}
+		for (const field of matches) {
+			const page = pages[field.pageIndex]
+			if (!page) continue
 
-		page.drawImage(pngImage, {
-			x: field.x,
-			y: field.y,
-			width: field.width,
-			height: field.height,
-		})
+			page.drawImage(pngImage, {
+				x: field.x,
+				y: field.y,
+				width: field.width,
+				height: field.height,
+			})
+		}
 
 		const updated = Buffer.from(await doc.save())
 		await this.localStorageService.savePdf(projectUuid, updated)

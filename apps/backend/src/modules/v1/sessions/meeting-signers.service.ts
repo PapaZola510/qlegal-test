@@ -28,6 +28,7 @@ import {
 	users,
 } from "@repo/db/schema"
 
+import { EventsService } from "@/modules/v1/events/events.service"
 import { LocalSigningService } from "@/services/signing/local-signing.service"
 import { LocalStorageService } from "@/services/storage/local-storage.service"
 import { NotarizedPdfDeliveryService } from "@/services/email/notarized-pdf-delivery.service"
@@ -54,7 +55,8 @@ export class MeetingSignersService {
 		private readonly notarizedArchive: NotarizedPdfArchiveService,
 		private readonly files: FilesService,
 		private readonly ienAttestation: IenAttestationService,
-		private readonly registry: RegistryService
+		private readonly registry: RegistryService,
+		private readonly events: EventsService
 	) {}
 
 	async listMeetingSignerParticipants(
@@ -425,10 +427,54 @@ export class MeetingSignersService {
 				}
 			}
 
+			let notarizedFileObjectId: string | undefined
+
+			const [apt] = await db
+				.select({ enpUserId: appointments.enpUserId })
+				.from(appointments)
+				.where(eq(appointments.id, appointmentId))
+				.limit(1)
+
+			if (apt?.enpUserId) {
+				const [enp] = await db
+					.select({ subOrgId: enpProfiles.subOrgId })
+					.from(enpProfiles)
+					.where(eq(enpProfiles.userId, apt.enpUserId))
+					.limit(1)
+
+				if (enp?.subOrgId) {
+					try {
+						const pdfBuffer = await this.localStorage.readPdf(quicksignProjectId)
+						const result = await this.files.uploadNotarizedPdfBuffer({
+							subOrgId: enp.subOrgId,
+							ownerUserId: apt.enpUserId,
+							buffer: pdfBuffer,
+							originalName: "signed-document.pdf",
+						})
+						notarizedFileObjectId = result.fileObjectId
+					} catch (e) {
+						const msg = e instanceof Error ? e.message : String(e)
+						this.log.warn(`Failed to upload local notarized PDF: ${msg.slice(0, 160)}`)
+					}
+				}
+			}
+
 			await db
 				.update(quicksignProjects)
-				.set({ status: "completed", completedAt: now, updatedAt: now })
+				.set({
+					status: "completed",
+					completedAt: now,
+					notarizedFileObjectId: notarizedFileObjectId ?? null,
+					updatedAt: now,
+				})
 				.where(eq(quicksignProjects.id, quicksignProjectId))
+
+			if (notarizedFileObjectId) {
+				this.events.emitToSession(appointmentId, "session:document-notarized", {
+					appointmentId,
+					documentId: documentFileId,
+				})
+			}
 
 			this.log.debug(
 				`checkAndFinalizeSignatures completed project=${quicksignProjectId.slice(0, 8)}…`
@@ -631,6 +677,20 @@ export class MeetingSignersService {
 				.where(eq(quicksignProjects.id, qs.id))
 
 			this.log.debug(`markMeetingDocumentPlotted SUCCESS appointment=${apt.id} document=${documentId}`)
+
+			this.events.emitToSession(apt.id, "session:document-plotted", {
+				appointmentId: apt.id,
+				documentId,
+			})
+			for (const signer of assignments.signers) {
+				if (signer.userId !== ctx.userId) {
+					this.events.emitToUser(signer.userId, "session:document-plotted", {
+						appointmentId: apt.id,
+						documentId,
+					})
+				}
+			}
+
 			return { ok: true }
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e)

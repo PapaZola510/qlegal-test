@@ -78,10 +78,9 @@ export function MeetingLocalSigningModal({
 
 				<div className="space-y-3">
 					<ToggleGroup
-						type="single"
-						value={signing.mode}
+						value={[signing.mode]}
 						onValueChange={v => {
-							if (v) signing.setMode(v as "draw" | "upload")
+							if (v.length > 0) signing.setMode(v[0] as "draw" | "upload")
 						}}
 						className="gap-2"
 					>
@@ -97,24 +96,59 @@ export function MeetingLocalSigningModal({
 
 					{signing.mode === "draw" ? (
 						<div className="space-y-2">
-							<canvas
-								ref={signing.canvasRef}
-								className="border-border h-32 w-full rounded-lg border bg-white"
-								onPointerDown={signing.startDrawing}
-								onPointerMove={signing.draw}
-								onPointerUp={signing.stopDrawing}
-								onPointerLeave={signing.stopDrawing}
-								onPointerCancel={signing.stopDrawing}
-							/>
-							<Button
-								type="button"
-								variant="outline"
-								size="xs"
-								onClick={signing.clearCanvas}
-								className="text-xs"
-							>
-								Clear
-							</Button>
+							{signing.signaturePngBase64 ? (
+								<>
+									<div className="border-border flex h-32 items-center justify-center rounded-lg border bg-white p-2">
+										{/* eslint-disable-next-line @next/next/no-img-element */}
+										<img
+											src={signing.signaturePngBase64}
+											alt="Drawn signature"
+											className="max-h-full max-w-full object-contain"
+										/>
+									</div>
+									<Button
+										type="button"
+										variant="outline"
+										size="xs"
+										onClick={signing.clearCanvas}
+										className="text-xs"
+									>
+										Redraw
+									</Button>
+								</>
+							) : (
+								<>
+									<canvas
+										ref={signing.canvasRef}
+										className="border-border h-32 w-full rounded-lg border bg-white"
+										onPointerDown={signing.startDrawing}
+										onPointerMove={signing.draw}
+										onPointerUp={signing.stopDrawing}
+										onPointerLeave={signing.stopDrawing}
+										onPointerCancel={signing.stopDrawing}
+									/>
+									<div className="flex gap-2">
+										<Button
+											type="button"
+											variant="outline"
+											size="xs"
+											onClick={signing.clearCanvas}
+											className="text-xs"
+										>
+											Clear
+										</Button>
+										<Button
+											type="button"
+											variant="default"
+											size="xs"
+											onClick={signing.handleUseCanvasSignature}
+											className="text-xs"
+										>
+											Use Signature
+										</Button>
+									</div>
+								</>
+							)}
 						</div>
 					) : (
 						<div className="space-y-2">

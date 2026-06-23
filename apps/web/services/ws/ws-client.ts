@@ -57,6 +57,16 @@ export type QlegalServerToClientEvents = {
 	"session:recording-notice": (payload: SessionRecordingNotice) => void
 	/** LiveKit session room: ENB principal e-sign phase updated */
 	"session:enb-signing": (payload: MeetingEnbSigningWsEvent) => void
+	/** Session: ENP confirmed signature fields plotted — signers can now sign */
+	"session:document-plotted": (payload: {
+		appointmentId: string
+		documentId: string
+	}) => void
+	/** Session: all signers completed, PDF notarized and ready for download */
+	"session:document-notarized": (payload: {
+		appointmentId: string
+		documentId: string
+	}) => void
 	/** Commission hearing room: ENA opened the hearing */
 	"commission-hearing:opened": (payload: { hearingRoomId: string }) => void
 	/** Commission hearing room: ENA ended the hearing */
@@ -185,6 +195,8 @@ function attachBufferedEventForwarders(instance: Socket): void {
 	forward("document-review:updated")
 	forward("session:chat")
 	forward("session:recording-notice")
+	forward("session:document-plotted")
+	forward("session:document-notarized")
 	forward("commission-hearing:opened")
 	forward("commission-hearing:ended")
 	forward("commission-hearing:decided")

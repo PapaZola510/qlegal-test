@@ -182,6 +182,34 @@ export function AppointmentMeetingContent({
 		return () => off()
 	}, [appointmentId, aptQ, enbSigningQ, isEnp, payload?.sessionRoomId])
 
+	React.useEffect(() => {
+		if (!payload?.sessionRoomId) return undefined
+		const off = subscribeQlegalEvent("session:document-plotted", event => {
+			if (event.appointmentId !== appointmentId) return
+			void queryClient.invalidateQueries({
+				queryKey: api.session.listMeetingDocumentSigners.key({}),
+			})
+			void queryClient.invalidateQueries({
+				queryKey: api.appointment.listAttachments.key({ input: { id: appointmentId } }),
+			})
+		})
+		return () => off()
+	}, [appointmentId, payload?.sessionRoomId, queryClient])
+
+	React.useEffect(() => {
+		if (!payload?.sessionRoomId) return undefined
+		const off = subscribeQlegalEvent("session:document-notarized", () => {
+			void queryClient.invalidateQueries({
+				queryKey: api.session.listMeetingDocumentSigners.key({}),
+			})
+			void queryClient.invalidateQueries({
+				queryKey: api.appointment.listAttachments.key({ input: { id: appointmentId } }),
+			})
+			toast.success("Document fully notarized and ready for download.")
+		})
+		return () => off()
+	}, [appointmentId, payload?.sessionRoomId, queryClient])
+
 	const enbSignedCount = enbSigningData?.signedCount ?? 0
 	const enbTotalRequests = enbSigningData?.totalRequests ?? 0
 	const attestationRequired = apt

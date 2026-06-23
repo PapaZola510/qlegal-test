@@ -377,7 +377,7 @@ export function useListMeetingDocumentSignersQuery(
 						notarizedPdfReady?: boolean
 				  }
 				| undefined
-			if (!data?.plotCompletedAt) return false
+			if (!data?.plotCompletedAt) return 10_000
 			if (!data.completed) return 4_000
 			if (!data.notarizedPdfReady) return 4_000
 			return false

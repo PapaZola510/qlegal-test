@@ -208,7 +208,7 @@ export const DocumentActions = React.memo(function DocumentActions({
 		return "text-amber-600 dark:text-amber-500"
 	}, [currentUserSigned, isUsersTurnToSign])
 
-	if (hasNoSignersSelected) return null
+	if (hasNoSignersSelected && !showAddSigners) return null
 
 	return (
 		<div className="space-y-2.5">

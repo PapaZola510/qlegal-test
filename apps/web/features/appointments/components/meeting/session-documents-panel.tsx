@@ -607,71 +607,68 @@ function DocumentInstrumentCard({
 										title="Waiting for DocOnChain to publish the completed notarized document"
 									>
 										<Spinner className="mr-1.5 size-3.5" />
-										Preparing notarized…
+										Processing notarized PDF…
+									</Button>
+								</div>
+								<p className="text-muted-foreground text-xs leading-relaxed">
+									All signatures are in. The notarized PDF is being finalized — this usually takes
+									a moment.
+								</p>
+							</div>
+						) : (
+							<div className="space-y-3">
+								<div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-xs leading-relaxed text-emerald-800 dark:text-emerald-200">
+									<span className="font-semibold">✓ Document fully notarized</span>
+									<br />
+									All signatures have been completed and the document is ready. You can view or
+									download the notarized PDF below.
+								</div>
+								<div className="flex flex-wrap items-center gap-2">
+									<Button
+										type="button"
+										size="sm"
+										className="h-8 text-xs"
+										title={
+											notarizedStoredInDb
+												? "Sealed notarized PDF (stored copy)"
+												: "Sealed notarized PDF from DocOnChain"
+										}
+										disabled={!notarizedPdfReady || notarizedPdfOpening}
+										onClick={() => void handleViewNotarizedPdf()}
+									>
+										{notarizedPdfOpening ? (
+											<>
+												<Spinner className="mr-1.5 size-3.5" />
+												Opening…
+											</>
+										) : (
+											"View notarized"
+										)}
 									</Button>
 									<Button
 										type="button"
 										variant="outline"
 										size="sm"
 										className="h-8 text-xs"
-										disabled
-										title="Waiting for DocOnChain to publish the completed notarized document"
+										title={
+											notarizedStoredInDb
+												? "Download sealed copy from storage"
+												: "Download sealed PDF from DocOnChain"
+										}
+										disabled={!notarizedPdfReady || notarizedPdfOpening}
+										onClick={() => void handleDownloadNotarizedPdf()}
 									>
-										<Spinner className="mr-1.5 size-3.5" />
-										Download
+										{notarizedPdfOpening ? (
+											<>
+												<Spinner className="mr-1.5 size-3.5" />
+												Downloading…
+											</>
+										) : (
+											"Download"
+										)}
 									</Button>
 								</div>
-								<p className="text-muted-foreground text-xs leading-relaxed">
-									All signatures are in. Waiting for DocOnChain to finish notarization and publish
-									the sealed document — this usually takes a minute.
-								</p>
 							</div>
-						) : (
-							<>
-								<Button
-									type="button"
-									size="sm"
-									className="h-8 text-xs"
-									title={
-										notarizedStoredInDb
-											? "Sealed notarized PDF (stored copy)"
-											: "Sealed notarized PDF from DocOnChain"
-									}
-									disabled={!notarizedPdfReady || notarizedPdfOpening}
-									onClick={() => void handleViewNotarizedPdf()}
-								>
-									{notarizedPdfOpening ? (
-										<>
-											<Spinner className="mr-1.5 size-3.5" />
-											Opening…
-										</>
-									) : (
-										"View notarized"
-									)}
-								</Button>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									className="h-8 text-xs"
-									title={
-										notarizedStoredInDb
-											? "Download sealed copy from storage"
-											: "Download sealed PDF from DocOnChain"
-									}
-									disabled={!notarizedPdfReady || notarizedPdfOpening}
-									onClick={() => void handleDownloadNotarizedPdf()}
-								>
-									{notarizedPdfOpening ? (
-										<>
-											<Spinner className="mr-1.5 size-3.5" />
-											Downloading…
-										</>
-									) : (
-										"Download"
-									)}
-								</Button>
-							</>
 						)
 					) : (
 						<>

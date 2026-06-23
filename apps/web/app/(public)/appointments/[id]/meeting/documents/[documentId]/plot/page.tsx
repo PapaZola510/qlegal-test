@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import type {
@@ -29,6 +28,8 @@ import {
 } from "@/features/appointments/api/meeting.hooks"
 import { env } from "@/env"
 
+import { PdfViewer } from "./pdf-viewer"
+
 const BOX_W = 200
 const BOX_H = 60
 
@@ -45,6 +46,13 @@ interface SignerDisplayInfo {
 	displayName: string
 	roleSuffix: string
 	color: "attorney" | "signee"
+}
+
+interface PageDim {
+	originalWidth: number
+	originalHeight: number
+	renderedWidth: number
+	renderedHeight: number
 }
 
 function roleLabel(role: string): string {
@@ -90,19 +98,35 @@ export default function DocumentPlotPage({
 }: {
 	params: Promise<{ id: string; documentId: string }>
 }) {
-	const router = useRouter()
 	const resolved = React.use(params)
 	const meetingId = resolved.id
 	const documentId = resolved.documentId
 	const [isConfirming, setIsConfirming] = React.useState(false)
 	const [selectedSignerEmail, setSelectedSignerEmail] = React.useState<string | null>(null)
 	const [plottedFields, setPlottedFields] = React.useState<PlacedField[]>([])
+	const [containerWidth, setContainerWidth] = React.useState(0)
+	const pageDimsRef = React.useRef<Record<number, PageDim>>({})
 
-	const surfaceRef = React.useRef<HTMLDivElement>(null)
+	const containerRef = React.useRef<HTMLDivElement>(null)
 
 	const assignmentsQ = useListMeetingDocumentSignerAssignmentsQuery(meetingId, documentId)
 	const participantsQ = useMeetingSignerParticipantsQuery(meetingId)
 	const signersQ = useListMeetingDocumentSignersQuery(meetingId, documentId)
+
+	const loading = assignmentsQ.isLoading || participantsQ.isLoading || signersQ.isLoading
+
+	React.useEffect(() => {
+		if (loading) return
+		const el = containerRef.current
+		if (!el) return
+		const observer = new ResizeObserver(entries => {
+			for (const entry of entries) {
+				setContainerWidth(entry.contentRect.width)
+			}
+		})
+		observer.observe(el)
+		return () => observer.disconnect()
+	}, [loading])
 
 	const assignments = assignmentsQ.data as ListMeetingDocumentSignerAssignmentsResult | undefined
 	const participants = (participantsQ.data as MeetingSignerParticipant[] | undefined) ?? []
@@ -135,31 +159,49 @@ export default function DocumentPlotPage({
 		return [...assignments.signers].sort((a, b) => a.signingOrder - b.signingOrder)
 	}, [assignments])
 
-	const pdfUrl = `${env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "")}/v1/files/${documentId}`
+	const pdfUrl = React.useMemo(
+		() => `${env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "")}/v1/files/${documentId}`,
+		[documentId]
+	)
 
-	const handleSurfaceClick = React.useCallback(
-		(e: React.MouseEvent<HTMLDivElement>) => {
+	const handleDocumentLoad = React.useCallback((_np: number) => {
+		// page count tracked internally by PdfViewer
+	}, [])
+
+	const handlePageLoad = React.useCallback((pageNumber: number, dim: PageDim) => {
+		pageDimsRef.current[pageNumber] = dim
+	}, [])
+
+	const handlePageClick = React.useCallback(
+		(pageNumber: number, e: React.MouseEvent<HTMLDivElement>) => {
 			if (!selectedSignerEmail) return
 
+			const dim = pageDimsRef.current[pageNumber]
+			if (!dim) return
+
 			const rect = e.currentTarget.getBoundingClientRect()
-			const rawX = e.clientX - rect.left - BOX_W / 2
-			const rawY = e.clientY - rect.top - BOX_H / 2
+			const cssClickX = e.clientX - rect.left
+			const cssClickY = e.clientY - rect.top
 
-			const surfaceW = e.currentTarget.scrollWidth
-			const surfaceH = e.currentTarget.scrollHeight
+			const scaleX = dim.originalWidth / dim.renderedWidth
+			const scaleY = dim.originalHeight / dim.renderedHeight
 
-			const x = Math.max(0, Math.min(rawX, surfaceW - BOX_W))
-			const y = Math.max(0, Math.min(rawY, surfaceH - BOX_H))
+			// pdf-lib drawImage positions by bottom-left corner.
+			// Center the field box on the click point.
+			const pdfX = (cssClickX - BOX_W / 2) * scaleX
+			const pdfY = dim.originalHeight - (cssClickY + BOX_H / 2) * scaleY
+			const pdfW = BOX_W * scaleX
+			const pdfH = BOX_H * scaleY
 
 			setPlottedFields(prev => [
 				...prev,
 				{
 					signerEmail: selectedSignerEmail,
-					pageIndex: 0,
-					x,
-					y,
-					width: BOX_W,
-					height: BOX_H,
+					pageIndex: pageNumber - 1,
+					x: Math.max(0, Math.round(pdfX)),
+					y: Math.max(0, Math.round(pdfY)),
+					width: Math.round(pdfW),
+					height: Math.round(pdfH),
 				},
 			])
 		},
@@ -184,24 +226,20 @@ export default function DocumentPlotPage({
 				width: Math.round(f.width),
 				height: Math.round(f.height),
 			}))
-			await (orpcClient as any).quicksign.saveSignatureFields({
-				id: projectId,
-				fields,
-			})
 			await (orpcClient as any).session.markMeetingDocumentPlotted({
 				meetingId,
 				documentId,
+				signatureFields: fields,
 			})
 			toast.success("Signature fields plotted. Signing can now begin.")
-			router.push(`/appointments/${meetingId}/meeting`)
+			window.close()
 		} catch (e) {
+			console.error("Plot confirm error:", e)
 			toast.error(getOrpcMutationErrorMessage(e, "Could not confirm plotting."))
 		} finally {
 			setIsConfirming(false)
 		}
-	}, [meetingId, documentId, plottedFields, projectId, router])
-
-	const loading = assignmentsQ.isLoading || participantsQ.isLoading || signersQ.isLoading
+	}, [meetingId, documentId, plottedFields, projectId])
 
 	return (
 		<div className="mx-auto flex min-h-dvh flex-col gap-4 p-4">
@@ -218,7 +256,7 @@ export default function DocumentPlotPage({
 					size="sm"
 					className="text-xs"
 					disabled={isConfirming}
-					onClick={() => router.back()}
+					onClick={() => window.close()}
 				>
 					Back
 				</Button>
@@ -230,69 +268,25 @@ export default function DocumentPlotPage({
 				</div>
 			) : (
 				<div className="flex flex-1 gap-4 overflow-hidden">
-					<div className="w-[70%] shrink-0">
+					<div ref={containerRef} className="w-[70%] shrink-0">
 						<div className="h-[80vh] overflow-y-auto relative rounded-lg border bg-muted/20">
-							<div
-								ref={surfaceRef}
-								className={cn(
-									"relative w-full",
-									selectedSignerEmail ? "cursor-crosshair" : "cursor-default"
-								)}
-								onClick={handleSurfaceClick}
-							>
-								<div className="relative w-full" style={{ minHeight: "2000px" }}>
-									<iframe
-										src={pdfUrl}
-										className="pointer-events-none absolute inset-0 h-full w-full rounded-lg"
-										title="Document preview"
-									/>
+							{containerWidth > 0 ? (
+								<PdfViewer
+									pdfUrl={pdfUrl}
+									containerWidth={containerWidth}
+									selectedSignerEmail={selectedSignerEmail}
+									plottedFields={plottedFields}
+									signerInfoByEmail={signerInfoByEmail}
+									onDocumentLoad={handleDocumentLoad}
+									onPageClick={handlePageClick}
+									onPageLoad={handlePageLoad}
+									onRemoveField={handleRemoveField}
+								/>
+							) : (
+								<div className="flex items-center justify-center h-full">
+									<Spinner />
 								</div>
-								{plottedFields.map((field, i) => {
-									const info = signerInfoByEmail.get(field.signerEmail)
-									const isAttorney = info?.color === "attorney"
-									return (
-										<div
-											key={i}
-											className={cn(
-												"absolute flex items-center justify-center rounded border-2",
-												isAttorney
-													? "border-blue-500 bg-blue-500/15"
-													: "border-emerald-500 bg-emerald-500/15"
-											)}
-											style={{
-												left: field.x,
-												top: field.y,
-												width: field.width,
-												height: field.height,
-											}}
-										>
-											<button
-												type="button"
-												className="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow hover:bg-red-600"
-												onClick={e => {
-													e.stopPropagation()
-													handleRemoveField(i)
-												}}
-												title="Remove field"
-											>
-												&times;
-											</button>
-											<span
-												className={cn(
-													"px-1 text-[10px] font-semibold leading-tight",
-													isAttorney
-														? "text-blue-700 dark:text-blue-300"
-														: "text-emerald-700 dark:text-emerald-300"
-												)}
-											>
-												{info
-													? `${info.displayName} — ${info.roleSuffix}`
-													: field.signerEmail}
-											</span>
-										</div>
-									)
-								})}
-							</div>
+							)}
 						</div>
 					</div>
 
@@ -374,7 +368,8 @@ export default function DocumentPlotPage({
 													<span className="font-medium">{label}</span>
 													<span className="text-muted-foreground">
 														{" "}
-														· ({Math.round(field.x)}, {Math.round(field.y)})
+														· Pg {field.pageIndex + 1} ({Math.round(field.x)},{" "}
+														{Math.round(field.y)})
 													</span>
 												</span>
 												<button
@@ -392,8 +387,8 @@ export default function DocumentPlotPage({
 						</Card>
 
 						<div className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40 rounded-md border px-3 py-2.5 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
-							👉 Note: Signatures will be stamped into the placed fields upon signing. Drag the
-							fields by placing them via PDF clicks.
+							Note: Signatures will be stamped into the placed fields upon signing. Click a signer
+							name, then click on the PDF page to place their field.
 						</div>
 
 						<div className="mt-auto pt-2">
@@ -401,7 +396,7 @@ export default function DocumentPlotPage({
 								type="button"
 								size="lg"
 								className="w-full text-sm font-semibold"
-								disabled={isConfirming || sortedSigners.length === 0}
+								disabled={isConfirming || sortedSigners.length === 0 || plottedFields.length === 0}
 								onClick={() => void handleConfirm()}
 							>
 								{isConfirming ? (
