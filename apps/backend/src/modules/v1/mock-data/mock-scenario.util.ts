@@ -15,7 +15,7 @@ import { ORPCError } from "@orpc/server"
  *  - "validation_error"→ throws BadRequestException
  *  - "empty"           → return empty datasets
  *  - "slow"            → adds artificial delay (caller must await)
- *  - "dc_popup_blocked"→ QuickSign / DOCONCHAIN plotter flow (popup blocked)
+ *  - "dc_popup_blocked"→ QuickSign / QuickSign plotter flow (popup blocked)
  *  - domain-specific   → e.g. "payment_failed", "exam_expired", "sc_sync_fail"
  */
 export function getMockScenario(req: {
@@ -50,12 +50,12 @@ export async function applyDelay(scenario: string | null, ms = 3000): Promise<vo
 	}
 }
 
-/** QuickSign / DOCONCHAIN — simulate plotter popup blocked (typed error for UI recovery). */
+/** QuickSign / QuickSign — simulate plotter popup blocked (typed error for UI recovery). */
 export function applyQuicksignPlotScenario(scenario: string | null): void {
 	if (scenario === "dc_popup_blocked") {
 		throw new ORPCError("BAD_REQUEST", {
 			message:
-				"DOCONCHAIN plotter popup was blocked (mock scenario dc_popup_blocked). Use Open again or confirm plotting when done.",
+				"QuickSign plotter popup was blocked (mock scenario dc_popup_blocked). Use Open again or confirm plotting when done.",
 			data: { quicksign: { code: "DC_POPUP_BLOCKED" } },
 		} as never)
 	}

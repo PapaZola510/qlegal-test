@@ -101,8 +101,8 @@ export function IdentityVerificationCard({
 			: profile.role === "client"
 				? "Verify your identity with HyperVerge to protect your bookings, messages, and documents on the platform."
 				: profile.role === "admin" ||
-					  profile.role === "super_admin" ||
-					  profile.role === "sub_org_admin"
+					 profile.role === "super_admin" ||
+					 profile.role === "sub_org_admin"
 					? "Complete HyperVerge identity verification before hosting commission hearings or other compliance-sensitive actions."
 					: "Complete HyperVerge identity verification to satisfy platform requirements for electronic notarization."
 

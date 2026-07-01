@@ -297,7 +297,7 @@ export function StepCreateMeeting({
 										All required signatures are complete.
 										{registrySynced
 											? " This act has been added to your notarial registry."
-											: " Registry entry will appear once DocOnChain finalizes the project."}
+											: " Registry entry will appear once finalizes the project."}
 									</p>
 								</div>
 								<QuicksignNotarizedPdfActions
@@ -325,7 +325,7 @@ export function StepCreateMeeting({
 								<p className="text-sm font-medium">Notary signing</p>
 								<p className="text-muted-foreground text-xs leading-relaxed">
 									{enpHasSigned
-										? "Your notary signature is recorded. Waiting for DocOnChain to seal the document…"
+										? "Your notary signature is recorded. Waiting for to seal the document…"
 										: "Complete your notary signature using the button below."}
 								</p>
 							</div>
@@ -357,7 +357,7 @@ export function StepCreateMeeting({
 								enpHasSigned
 									? "You have already signed as notary"
 									: principalHasSigned
-										? "Open your notary signing session in DocOnChain"
+										? "Open your notary signing session "
 										: "Available after the principal finishes signing"
 							}
 							onClick={() => window.open(enpSignDocumentUrl, "_blank", "noopener,noreferrer")}

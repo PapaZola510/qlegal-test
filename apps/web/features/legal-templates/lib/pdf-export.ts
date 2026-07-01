@@ -352,13 +352,13 @@ export async function exportAffidavitOfDiscrepancy(
 
 	// Venue lines
 	page.drawLine({ start: { x, y }, end: { x: x + 120, y }, thickness: 0.5, color: MUTED })
-	page.drawText("   ) S.S.", { x: x + 120, y, size: SIZE_SM, font: regular, color: INK })
+	page.drawText("  ) S.S.", { x: x + 120, y, size: SIZE_SM, font: regular, color: INK })
 	y -= LH_SM
 	page.drawLine({ start: { x, y }, end: { x: x + 120, y }, thickness: 0.5, color: MUTED })
-	page.drawText("   )", { x: x + 120, y, size: SIZE_SM, font: regular, color: INK })
+	page.drawText("  )", { x: x + 120, y, size: SIZE_SM, font: regular, color: INK })
 	y -= LH_SM
 	page.drawLine({ start: { x, y }, end: { x: x + 120, y }, thickness: 0.5, color: MUTED })
-	page.drawText("   )", { x: x + 120, y, size: SIZE_SM, font: regular, color: INK })
+	page.drawText("  )", { x: x + 120, y, size: SIZE_SM, font: regular, color: INK })
 	y -= LH * 1.5
 
 	// Subscribed
@@ -1402,7 +1402,7 @@ export async function exportSwornStatementAssetsLiabilitiesNetWorth(
 		})
 		y -= 10
 
-		const note2 = "[ ] Joint Filing      [ ] Separate Filing      [ ] Not Applicable"
+		const note2 = "[ ] Joint Filing   [ ] Separate Filing   [ ] Not Applicable"
 		page.drawText(note2, {
 			x: (PAGE_W - regular.widthOfTextAtSize(note2, 8)) / 2,
 			y,
@@ -1567,7 +1567,7 @@ export async function exportSwornStatementAssetsLiabilitiesNetWorth(
 		color: INK,
 	})
 	page.drawText(
-		`${f(data.declarantFamilyName)}   ${f(data.declarantFirstName)}   ${f(data.declarantMiddleInitial)}`,
+		`${f(data.declarantFamilyName)}  ${f(data.declarantFirstName)}  ${f(data.declarantMiddleInitial)}`,
 		{
 			x: left + 80,
 			y: nameY,
@@ -1592,7 +1592,7 @@ export async function exportSwornStatementAssetsLiabilitiesNetWorth(
 	})
 	y -= 11
 	page.drawText("", { x: left, y, size: 7, font: regular, color: INK })
-	page.drawText("(Family Name)           (First Name)           (M.I.)", {
+	page.drawText("(Family Name)      (First Name)      (M.I.)", {
 		x: left + 92,
 		y,
 		size: 7,
@@ -1657,7 +1657,7 @@ export async function exportSwornStatementAssetsLiabilitiesNetWorth(
 		color: INK,
 	})
 	page.drawText(
-		`${f(data.spouseFamilyName)}   ${f(data.spouseFirstName)}   ${f(data.spouseMiddleInitial)}`,
+		`${f(data.spouseFamilyName)}  ${f(data.spouseFirstName)}  ${f(data.spouseMiddleInitial)}`,
 		{
 			x: left + 56,
 			y,
@@ -1682,7 +1682,7 @@ export async function exportSwornStatementAssetsLiabilitiesNetWorth(
 	})
 	y -= 11
 	page.drawText("", { x: left, y, size: 7, font: regular, color: INK })
-	page.drawText("(Family Name)           (First Name)           (M.I.)", {
+	page.drawText("(Family Name)      (First Name)      (M.I.)", {
 		x: left + 92,
 		y,
 		size: 7,
@@ -3046,9 +3046,9 @@ SELLER
 
 Signed in the presence of:
 
-__________________________          __________________________
-${f(data.witness1Name)}                    ${f(data.witness2Name)}
-Witness                                           Witness
+__________________________     __________________________
+${f(data.witness1Name)}          ${f(data.witness2Name)}
+Witness                      Witness
 
 ACKNOWLEDGMENT
 (REPUBLIC OF THE PHILIPPINES)
@@ -3113,7 +3113,7 @@ ${f(data.cityProvince)}
 
 BEFORE ME, personally appeared:
 
-Name                          CTC Number                    Date/Place Issued
+Name             CTC Number          Date/Place Issued
 
 Known to me and to me known to be the same persons who executed the foregoing instrument and acknowledged to me that the same is their free and voluntary act and deed.
 
@@ -3173,15 +3173,15 @@ For and in consideration of the love and affection which the DONOR has for the D
 
 IN WITNESS WHEREOF, the parties to this Deed of Donation have hereunto set their hand on ${f(data.executionDay)} in ${f(data.executionPlace)}.
 
-_______________________________          _______________________________
-${f(data.donorName)}                            ${f(data.doneeeName)}
-Donor                                                  Donee
+_______________________________     _______________________________
+${f(data.donorName)}              ${f(data.doneeeName)}
+Donor                         Donee
 
 Signed in the presence of:
 
-__________________________          __________________________
-${f(data.witness1Name)}                    ${f(data.witness2Name)}
-Witness                                           Witness
+__________________________     __________________________
+${f(data.witness1Name)}          ${f(data.witness2Name)}
+Witness                      Witness
 
 ACKNOWLEDGMENT
 (REPUBLIC OF THE PHILIPPINES)

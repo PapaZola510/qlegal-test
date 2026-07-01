@@ -41,6 +41,7 @@ import { assertGovernmentIdAllowsNotarialActs } from "@/modules/v1/auth-profile/
 import { FilesService } from "@/modules/v1/files/files.service"
 import { IenAttestationService } from "@/modules/v1/ien-attestation/ien-attestation.service"
 import { RegistryService } from "@/modules/v1/registry/registry.service"
+import { stampCertificationPage } from "@/utils/stamp-certification-page"
 
 type MeetingSignerRole = "notary" | "principal" | "witness"
 
@@ -188,7 +189,7 @@ export class MeetingSignersService {
 			}
 		}
 
-		await this.ensureDoconchainProjectForSignerAssignment({
+		await this.ensureProjectForSignerAssignment({
 			apt,
 			documentId,
 			qs,
@@ -430,7 +431,7 @@ export class MeetingSignersService {
 			let notarizedFileObjectId: string | undefined
 
 			const [apt] = await db
-				.select({ enpUserId: appointments.enpUserId })
+				.select({ enpUserId: appointments.enpUserId, sessionMode: appointments.sessionMode })
 				.from(appointments)
 				.where(eq(appointments.id, appointmentId))
 				.limit(1)
@@ -445,10 +446,28 @@ export class MeetingSignersService {
 				if (enp?.subOrgId) {
 					try {
 						const pdfBuffer = await this.localStorage.readPdf(quicksignProjectId)
+						const { pdf: stampedPdf, code, hash } = await stampCertificationPage(pdfBuffer, apt.enpUserId, {
+							sessionMode: apt.sessionMode,
+						})
+						if (code) {
+							const [docRow] = await db
+								.select({ feePhp: appointmentDocuments.feePhp })
+								.from(appointmentDocuments)
+								.where(
+									and(
+										eq(appointmentDocuments.appointmentId, appointmentId),
+										eq(appointmentDocuments.fileObjectId, documentFileId)
+									)
+								)
+								.limit(1)
+							const feePart = docRow?.feePhp != null ? `|Fees: PHP ${docRow.feePhp}` : ""
+							const desc = `qlegal-code:${code}|qlegal-hash:${hash}${feePart}`
+							await db.update(quicksignProjects).set({ description: desc, updatedAt: new Date() }).where(eq(quicksignProjects.id, quicksignProjectId))
+						}
 						const result = await this.files.uploadNotarizedPdfBuffer({
 							subOrgId: enp.subOrgId,
 							ownerUserId: apt.enpUserId,
-							buffer: pdfBuffer,
+							buffer: stampedPdf,
 							originalName: "signed-document.pdf",
 						})
 						notarizedFileObjectId = result.fileObjectId
@@ -485,6 +504,46 @@ export class MeetingSignersService {
 			this.log.debug(`Meeting signature finalization skipped: ${msg.slice(0, 160)}`)
 			return false
 		}
+	}
+
+	async reSignNotarizedDocument(
+		ctx: QlegalSessionContext | null,
+		meetingId: string,
+		documentId: string
+	): Promise<{ ok: boolean }> {
+		if (!ctx?.userId) throw new ORPCError("UNAUTHORIZED", { message: "Authentication required" })
+
+		const apt = await this.loadAppointmentForMeeting(ctx, meetingId)
+		if (ctx.userId !== apt.enpUserId) {
+			throw new ORPCError("FORBIDDEN", { message: "Only the ENP may restart notarization" })
+		}
+
+		await this.assertDocumentOnAppointment(apt.id, documentId)
+		const qs = await this.loadQuicksignProjectForDocument(apt.enpUserId, documentId)
+		if (!qs) {
+			throw new ORPCError("BAD_REQUEST", { message: "No quicksign project found for this document" })
+		}
+
+		if (qs.status !== "completed") {
+			throw new ORPCError("BAD_REQUEST", {
+				message: "Document must be in completed status to restart",
+			})
+		}
+
+		await db
+			.update(quicksignProjects)
+			.set({
+				status: "pending_signatures",
+				notarizedFileObjectId: null,
+				description: "",
+				completedAt: null,
+				updatedAt: new Date(),
+			})
+			.where(eq(quicksignProjects.id, qs.id))
+
+		this.log.log(`reSignNotarizedDocument reset project=${qs.id.slice(0, 8)}`)
+
+		return { ok: true }
 	}
 
 	async streamMeetingDocumentNotarizedPdf(
@@ -606,7 +665,7 @@ export class MeetingSignersService {
 			.map(s => ({ userId: s.userId, role: s.role }))
 		const userMeta = await this.loadSignerUserMeta(signers.map(s => s.userId))
 
-		await this.ensureDoconchainProjectForSignerAssignment({
+		await this.ensureProjectForSignerAssignment({
 			apt,
 			documentId,
 			qs,
@@ -1067,9 +1126,9 @@ export class MeetingSignersService {
 	}
 
 	/**
-	 * Signers are managed via `meetingSignatureRequests` — no DocOnChain signer sync needed.
+	 * Signers are managed via `meetingSignatureRequests` — local signer sync only.
 	 */
-	private async syncDoconchainProjectSigners(_args: {
+	private async syncProjectSigners(_args: {
 		enpUserId: string
 		projectUuid: string
 		signers: { userId: string; role: MeetingSignerRole }[]
@@ -1079,7 +1138,7 @@ export class MeetingSignersService {
 	}
 
 	/** Before first plot, save the PDF locally and auto-generate signature fields. */
-	private async ensureDoconchainProjectForSignerAssignment(args: {
+	private async ensureProjectForSignerAssignment(args: {
 		apt: typeof appointments.$inferSelect
 		documentId: string
 		qs: {
@@ -1129,7 +1188,7 @@ export class MeetingSignersService {
 			.where(eq(quicksignProjects.id, localProjectId))
 
 		this.log.debug(
-			`ensureDoconchainProjectForSignerAssignment: saved PDF + ${fields.length} fields for project=${localProjectId.slice(0, 8)}…`
+			`ensureProjectForSignerAssignment: saved PDF + ${fields.length} fields for project=${localProjectId.slice(0, 8)}…`
 		)
 		return localProjectId
 	}

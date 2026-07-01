@@ -21,7 +21,7 @@ const partners = [
 		name: "PropTech Consortium PH",
 		url: "https://facebook.com/PropTechConsortiumPH",
 	},
-	{ icon: Shield01Icon, name: "DOCONCHAIN Group", url: "https://doconchain.com" },
+
 	{ icon: Building05Icon, name: "Hyperledger Fabric", url: "https://ibm.com/topics/hyperledger" },
 ]
 

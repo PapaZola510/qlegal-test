@@ -353,7 +353,7 @@ export function ProfilePageContent() {
 								editing ? (
 									<div className="space-y-4">
 										<p className="text-muted-foreground text-sm leading-relaxed">
-											These details are sent to DocOnChain when you create a signing project and
+											These details are sent to when you create a signing project and
 											appear on your electronic notarial seal. Hover the{" "}
 											<span className="font-medium">?</span> beside each field for an example.
 										</p>

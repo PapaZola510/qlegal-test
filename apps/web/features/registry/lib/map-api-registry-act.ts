@@ -103,7 +103,7 @@ export function mapApiRegistryActToRow(api: RegistryActApi): RegistryAct {
 		documentUrl: api.documentUrl ?? "",
 		documentFileObjectId: api.documentFileObjectId ?? null,
 		projectUuid: api.doconchainProjectUuid?.trim() || null,
-		documentCode: api.doconchainDocumentCode?.trim() || null,
+		documentCode: api.documentCode?.trim() || null,
 		scFailureReason: api.scRejectionReason,
 		scFailureTimestamp:
 			scSync === "failed"

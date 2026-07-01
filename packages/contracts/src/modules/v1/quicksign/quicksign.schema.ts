@@ -49,7 +49,7 @@ export const QuicksignProjectSchema = z.object({
 		z.object({
 			id: z.string(),
 			name: z.string(),
-			/** Relaxed from `.email()`: legacy / DocOnChain rows may hold non-RFC strings; strict validation caused HTTP 500. */
+			/** Relaxed from `.email()`: legacy / rows may hold non-RFC strings; strict validation caused HTTP 500. */
 			email: z.string().min(1),
 			signedAt: z.string().nullable(),
 			order: z.number().int(),
@@ -66,7 +66,7 @@ export const QuicksignProjectSchema = z.object({
 		.default([]),
 	expiresAt: z.string().nullable(),
 	completedAt: z.string().nullable(),
-	/** Present on GET after DocOnChain + meeting signer sync. */
+	/** Present on GET after + meeting signer sync. */
 	signingComplete: z.boolean().optional(),
 	/** Present when a notarial registry act exists for the linked appointment. */
 	registrySynced: z.boolean().optional(),

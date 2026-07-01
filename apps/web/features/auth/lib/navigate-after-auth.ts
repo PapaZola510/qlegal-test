@@ -43,7 +43,7 @@ export async function navigateToMfa(router: AppRouterInstance): Promise<void> {
 
 /**
  * After OAuth or successful MFA, resolve the next route. Calling `authProfile.me()`
- * ensures a client profile exists and triggers DocOnChain organization auto-join
+ * ensures a client profile exists and triggers organization auto-join
  * when configured.
  */
 export async function navigateAfterAuth(

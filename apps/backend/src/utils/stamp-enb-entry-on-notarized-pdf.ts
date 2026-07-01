@@ -7,7 +7,7 @@ export type { NotarialBookFooterFields as NotarialBookPdfFooter }
 /** @deprecated Use {@link NotarialBookPdfFooter} */
 export type EnbPdfStampMeta = NotarialBookFooterFields
 
-/** Left-column Doc./Page/Book/Series block (above the DocOnChain notarial seal on the last page). */
+/** Left-column Doc./Page/Book/Series block. */
 const FOOTER_LEFT_X = 72
 const FOOTER_FONT_SIZE = 10
 const FOOTER_LINE_HEIGHT = 12
@@ -20,9 +20,13 @@ function pdfDocAlreadyHasNotarialBookFooter(doc: PDFDocument): boolean {
 	return (doc.getSubject() ?? "").includes(FOOTER_STAMP_MARKER)
 }
 
+function pdfDocHasCertificationPage(doc: PDFDocument): boolean {
+	return (doc.getSubject() ?? "").includes("qlegal-certification-page")
+}
+
 /**
  * Embeds the traditional Doc./Page/Book/Series block on the last page of a sealed notarized PDF.
- * Quanby Legal assigns book and page numbers — DocOnChain only renders the notarial seal.
+ * Quanby Legal assigns book and page numbers and renders the notarial seal.
  */
 export async function stampNotarialBookFooterOnPdf(
 	pdf: Buffer,
@@ -42,7 +46,9 @@ export async function stampNotarialBookFooterOnPdf(
 
 	const regular = await doc.embedFont(StandardFonts.Helvetica)
 	const italic = await doc.embedFont(StandardFonts.HelveticaOblique)
-	const last = pages[pages.length - 1]!
+	// If the last page is the certification page, stamp on the previous page instead
+	const targetIdx = pdfDocHasCertificationPage(doc) && pages.length > 1 ? pages.length - 2 : pages.length - 1
+	const target = pages[targetIdx]!
 
 	const lines: { text: string; font: typeof regular; y: number }[] = [
 		{
@@ -67,8 +73,8 @@ export async function stampNotarialBookFooterOnPdf(
 		},
 	]
 
-	// Cover blank template underscores on the last page, then print ENB values.
-	last.drawRectangle({
+	// Cover blank template underscores on the target page, then print ENB values.
+	target.drawRectangle({
 		x: FOOTER_LEFT_X - 4,
 		y: FOOTER_SERIES_BASE_Y - 3,
 		width: 132,
@@ -78,7 +84,7 @@ export async function stampNotarialBookFooterOnPdf(
 	})
 
 	for (const line of lines) {
-		last.drawText(line.text, {
+		target.drawText(line.text, {
 			x: FOOTER_LEFT_X,
 			y: line.y,
 			size: FOOTER_FONT_SIZE,

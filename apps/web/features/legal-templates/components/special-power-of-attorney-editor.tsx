@@ -108,7 +108,7 @@ function DocumentPreview({ data }: { data: SpecialPowerOfAttorneyData }) {
 				<div className="mb-4">BEFORE ME, personally appeared:</div>
 
 				<div className="mb-4">
-					<div className="mb-2">Name                          CTC Number                    Date/Place Issued</div>
+					<div className="mb-2">Name             CTC Number          Date/Place Issued</div>
 				</div>
 
 				<p className="text-justify mb-4">

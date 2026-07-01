@@ -32,7 +32,6 @@ import {
 	useFinalizeQuicksignMutation,
 	useQuicksignProjectQuery,
 	useQuicksignProjectsQuery,
-	useRetryQuicksignDcProjectMutation,
 } from "../api/quicksign.hooks"
 import { useQuicksignPlotting } from "../api/use-quicksign-plotting"
 import { buildScheduledAtIso } from "../lib/build-meeting-schedule"
@@ -73,7 +72,6 @@ export function QuickSignContent() {
 
 	const createProject = useCreateQuicksignProjectMutation()
 	const completePlotting = useCompleteQuicksignPlottingMutation()
-	const retryDc = useRetryQuicksignDcProjectMutation()
 	const finalizeMeeting = useFinalizeQuicksignMutation()
 	const advanceReviewQuicksign = useAdvanceDocumentReviewQuicksignMutation()
 
@@ -229,7 +227,7 @@ export function QuickSignContent() {
 			signerAdded: true,
 			step: "plot_fields",
 		})
-		toast.success(`DocOnChain project ${projectRef} created. Continue to plot signature fields.`)
+		toast.success(`project ${projectRef} created. Continue to plot signature fields.`)
 	}
 
 	async function handleUploadSubmit() {
@@ -271,7 +269,7 @@ export function QuickSignContent() {
 			})
 
 			if (!project.doconchainProjectUuid) {
-				throw new Error("DocOnChain project was not created. Try again.")
+				throw new Error("project was not created. Try again.")
 			}
 
 			patch({
@@ -286,7 +284,7 @@ export function QuickSignContent() {
 		} catch (e) {
 			const { message, code, projectId } = getQuicksignErrorDetails(
 				e,
-				"Could not create the DocOnChain project."
+				"Could not create the project."
 			)
 			patch({
 				isLoading: false,
@@ -303,29 +301,27 @@ export function QuickSignContent() {
 	}
 
 	async function handleRetryProject() {
-		if (!state.documentFileId && !state.projectId) {
-			patch({ error: "No project to retry. Upload the document again." })
+		if (!state.documentFileId) {
+			patch({ error: "No document to retry. Upload the document again." })
 			return
 		}
 
 		patch({ isLoading: true, error: null, errorCode: null })
 
 		try {
-			const project = state.documentFileId
-				? await createProject.mutateAsync({
-						title: state.upload.fileName.trim(),
-						description: `QuickSign · ${state.upload.notarizationType}`,
-						documentFileId: state.documentFileId,
-						signer: {
-							email: state.signer.email.trim(),
-							firstName: state.signer.firstName.trim(),
-							lastName: state.signer.lastName.trim(),
-						},
-						enpDocumentTypeIds: state.documentTypeIds,
-					})
-				: await retryDc.mutateAsync(state.projectId!)
+			const project = await createProject.mutateAsync({
+				title: state.upload.fileName.trim(),
+				description: `QuickSign · ${state.upload.notarizationType}`,
+				documentFileId: state.documentFileId,
+				signer: {
+					email: state.signer.email.trim(),
+					firstName: state.signer.firstName.trim(),
+					lastName: state.signer.lastName.trim(),
+				},
+				enpDocumentTypeIds: state.documentTypeIds,
+			})
 			if (!project.doconchainProjectUuid) {
-				throw new Error("DocOnChain project was not created. Try again.")
+				throw new Error("Project was not created. Try again.")
 			}
 			applyProjectSuccess(project.id)
 		} catch (e) {

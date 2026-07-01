@@ -263,8 +263,8 @@ export function UploadDocumentModal({
 									{bookedDocumentType
 										? "Pre-filled from the booked type price — you can change it for this document."
 										: suggestedFeePhp !== null &&
-											  suggestedFeePhp !== undefined &&
-											  suggestedFeePhp > 0
+											 suggestedFeePhp !== undefined &&
+											 suggestedFeePhp > 0
 											? "Pre-filled from your directory base fee — you can change it for this document."
 											: "Enter the fee for this instrument. It is recorded for the notarial book."}
 								</p>

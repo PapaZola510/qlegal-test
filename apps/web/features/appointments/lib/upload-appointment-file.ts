@@ -8,7 +8,7 @@ const MAX_RECORDING_BYTES = 4 * 1024 * 1024 * 1024
 export function validateMeetingDocumentFile(file: File): string | null {
 	const mime = file.type.toLowerCase()
 	if (mime !== "application/pdf") {
-		return "Only PDF files are allowed (required for DocOnChain signing)."
+		return "Only PDF files are allowed (required for signing)."
 	}
 	if (file.size > MAX_BYTES) {
 		return "File must be 20MB or smaller."
@@ -164,7 +164,7 @@ export async function uploadDocumentReviewFile(args: {
 
 /**
  * Principal/client upload helper. Hits the appointment-scoped endpoint that
- * uploads the file into the ENP's sub-org without provisioning a DocOnChain
+ * uploads the file into the ENP's sub-org without provisioning a 
  * project — the ENP creates the signing project from the document card.
  */
 export async function uploadPrincipalMeetingDocumentFile(args: {

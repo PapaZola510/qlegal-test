@@ -44,7 +44,7 @@ export function NotarialAttestationDialog({
 	const label = documentName?.trim() || "this document"
 	const dialogDescription =
 		description ??
-		`Before signing ${label} in DocOnChain, read and confirm the legal statement below.`
+		`Before signing ${label} , read and confirm the legal statement below.`
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>

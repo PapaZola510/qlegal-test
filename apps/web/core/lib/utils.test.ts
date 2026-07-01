@@ -20,7 +20,7 @@ describe("getInitials", () => {
 	})
 
 	it("returns empty string for whitespace-only input", () => {
-		expect(getInitials("   ")).toBe("")
+		expect(getInitials("  ")).toBe("")
 	})
 
 	it("returns first 2 chars uppercased for a single word", () => {
@@ -44,7 +44,7 @@ describe("getInitials", () => {
 	})
 
 	it("handles extra whitespace between words", () => {
-		expect(getInitials("John   Doe")).toBe("JD")
+		expect(getInitials("John  Doe")).toBe("JD")
 	})
 
 	it("uppercases lowercase initials", () => {

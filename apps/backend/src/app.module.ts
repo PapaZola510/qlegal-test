@@ -17,7 +17,7 @@ import { V1Module } from "@/modules/v1/v1.module"
 import { ORPCCommonModule } from "./common/orpc/orpc.module"
 import { SessionModule } from "./common/session/session.module"
 import { env } from "./config/env.config"
-import { DoconchainModule } from "./services/doconchain/doconchain.module"
+
 import { LmsModule } from "./services/lms/lms.module"
 import { ScRegistryModule } from "./services/sc-registry/sc-registry.module"
 import { EmailVerifiedGuard } from "./shared/guards/email-verified.guard"
@@ -41,7 +41,6 @@ import { AuditInterceptor } from "./shared/interceptors/audit.interceptor"
 		BootstrapModule,
 		EnbBackupModule,
 		SessionModule,
-		DoconchainModule,
 		LmsModule,
 		ScRegistryModule,
 		// oRPC setup

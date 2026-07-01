@@ -5,7 +5,7 @@ import type { Route } from "next"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ConnectionStateToast, LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react"
-import { useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import {
@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/t
 import { getOrpcMutationErrorMessage } from "@/core/lib/orpc-error-message"
 import { cn } from "@/core/lib/utils"
 import { authClient } from "@/services/better-auth/auth-client"
-import { orpc } from "@/services/orpc/client"
+import { orpc, orpcClient } from "@/services/orpc/client"
 import { joinSessionRoom, leaveSessionRoom, subscribeQlegalEvent } from "@/services/ws/ws-client"
 import {
 	useAppointmentQuery,
@@ -104,6 +104,7 @@ export function AppointmentMeetingContent({
 	const sessionEndedRef = React.useRef(false)
 	const [inviteOpen, setInviteOpen] = React.useState(false)
 	const [meetingSidebarTab, setMeetingSidebarTab] = React.useState("participants")
+	const [notarizedDocumentIds, setNotarizedDocumentIds] = React.useState(() => new Set<string>())
 	const autoPaymentTabAppliedRef = React.useRef(false)
 
 	const apt = aptQ.data as Appointment | undefined
@@ -131,6 +132,30 @@ export function AppointmentMeetingContent({
 	const myEnbPending = enbSigningData?.myPending ?? []
 	const recordings = (recordingsQ.data as MeetingRecording[] | undefined) ?? []
 	const documentSigning = useDocumentSigning(appointmentId, isEnp)
+	const reSign = useMutation({
+		mutationFn: async (input: { meetingId: string; documentId: string }) =>
+			(orpcClient as any).session.reSignNotarizedDocument(input) as Promise<{ ok: boolean }>,
+		onSuccess: () => {
+			setNotarizedDocumentIds(new Set())
+			toast.success("Document reset. You can re-initiate signing.")
+		},
+		onError: (e: unknown) => toast.error(getOrpcMutationErrorMessage(e, "Could not reset document.")),
+	})
+
+	// DEV: seed notarized state from existing attachments so "Restart notarization" shows
+	// for documents sealed before this code loaded. Remove when dev testing is complete.
+	React.useEffect(() => {
+		const attachments = attachmentsQ.data as AppointmentAttachment[] | undefined
+		if (attachments) {
+			const existing = new Set<string>()
+			for (const a of attachments) {
+				if (a.quicksignProjectId) existing.add(a.fileObjectId)
+			}
+			if (existing.size > 0) {
+				setNotarizedDocumentIds(existing)
+			}
+		}
+	}, [attachmentsQ.data])
 
 	function handleDeleteRecording(fileObjectId: string) {
 		void deleteRecording.mutateAsync({ fileObjectId }).then(
@@ -198,7 +223,12 @@ export function AppointmentMeetingContent({
 
 	React.useEffect(() => {
 		if (!payload?.sessionRoomId) return undefined
-		const off = subscribeQlegalEvent("session:document-notarized", () => {
+		const off = subscribeQlegalEvent("session:document-notarized", payload => {
+			setNotarizedDocumentIds(prev => {
+				const next = new Set(prev)
+				next.add(payload.documentId)
+				return next
+			})
 			void queryClient.invalidateQueries({
 				queryKey: api.session.listMeetingDocumentSigners.key({}),
 			})
@@ -502,7 +532,7 @@ export function AppointmentMeetingContent({
 		try {
 			await startSession.mutateAsync({ id: appointmentId, status: "ended" })
 			toast.success(
-				"Meeting ended. Fully signed instruments are added to your notarial registry in signing order, with notarized PDFs from DocOnChain when available."
+				"Meeting ended. Fully signed instruments are added to your notarial registry in signing order, with notarized PDFs when available."
 			)
 			clearJoinPayload(appointmentId)
 			router.replace("/appointments" as Route)
@@ -655,6 +685,25 @@ export function AppointmentMeetingContent({
 						</span>
 					</div>
 					<div className="flex shrink-0 flex-wrap items-center gap-2">
+						{isEnp && notarizedDocumentIds.size > 0 ? (
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={reSign.isPending}
+								onClick={() => {
+									const docId = notarizedDocumentIds.values().next().value
+									if (docId) {
+										void reSign.mutateAsync({
+											meetingId: appointmentId,
+											documentId: docId,
+										})
+									}
+								}}
+								title="Reset sealed document to re-generate the certification page"
+							>
+								Restart notarization
+							</Button>
+						) : null}
 						{isEnp ? (
 							<Button
 								variant="secondary"

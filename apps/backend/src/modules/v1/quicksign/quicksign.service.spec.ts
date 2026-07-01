@@ -119,24 +119,15 @@ jest.mock("@/common/database/database.client", () => ({
 }))
 
 jest.mock("@/config/env.config", () => ({
-	doconchainOrgEmailFallback: jest.fn().mockReturnValue(null),
-	env: {
-		DOCONCHAIN_APP_URL: "https://doconchain.test",
-	},
 	publicAppUrl: jest.fn().mockReturnValue("https://app.test"),
 }))
 
-jest.mock("@/services/doconchain/doconchain-adapter.service", () => ({
-	DoconchainAdapterService: class DoconchainAdapterService {},
-	isDoconchainProjectCompleted: jest.fn().mockReturnValue(false),
+jest.mock("@/services/signing/local-signing.service", () => ({
+	LocalSigningService: class LocalSigningService {},
 }))
 
-jest.mock("@/services/doconchain/doconchain-project-provision.service", () => ({
-	DoconchainProjectProvisionService: class DoconchainProjectProvisionService {},
-}))
-
-jest.mock("@/services/doconchain/generate-sign-link", () => ({
-	generateDoconchainSignLink: jest.fn().mockResolvedValue("https://app.test/sign"),
+jest.mock("@/services/storage/local-storage.service", () => ({
+	LocalStorageService: class LocalStorageService {},
 }))
 
 jest.mock("@/services/email/email-adapter", () => ({
@@ -238,13 +229,6 @@ function createService() {
 	const files = {
 		readStoredFileBuffer: jest.fn().mockResolvedValue(Buffer.from("fake-pdf")),
 	}
-	const dc = {
-		getAccessToken: jest.fn().mockResolvedValue("token"),
-		addSigner: jest.fn().mockResolvedValue(undefined),
-	}
-	const doconchainProvision = {
-		createProjectUuidFromPdfFile: jest.fn().mockResolvedValue("dc-1"),
-	}
 	const email = {
 		sendQuicksignSessionInvite: jest.fn().mockResolvedValue(undefined),
 	}
@@ -275,8 +259,6 @@ function createService() {
 
 	const service = new QuicksignService(
 		files as never,
-		dc as never,
-		doconchainProvision as never,
 		email as never,
 		events as never,
 		sessions as never,
@@ -319,12 +301,9 @@ function createService() {
 		signingComplete: false,
 		registrySynced: false,
 	})
-	jest.spyOn(service as any, "resolveSignDocumentUrl").mockResolvedValue("https://app.test/sign")
 
 	return {
 		service,
-		dc,
-		doconchainProvision,
 		sessions,
 		meetingSigners,
 		ienAttestation,
@@ -392,7 +371,7 @@ describe("QuicksignService", () => {
 
 	describe("create", () => {
 		it("creates a project with the first signer and document type snapshots", async () => {
-			const { service, dc, doconchainProvision, enpDocumentTypes } = createService()
+			const { service, enpDocumentTypes } = createService()
 			enpDocumentTypes.resolveAndValidateSelection.mockResolvedValue([
 				{ id: "dt-1", pricePhp: 250 },
 				{ id: "dt-2", pricePhp: 400 },
@@ -461,7 +440,7 @@ describe("QuicksignService", () => {
 		})
 
 		it("keeps legacy create behavior when signer and document types are omitted", async () => {
-			const { service, dc, enpDocumentTypes } = createService()
+			const { service, enpDocumentTypes } = createService()
 			mockInsertReturning(quicksignProjects, [{ ...baseProject, status: "draft" }])
 			mockUpdateReturning(quicksignProjects, [baseProject])
 			mockSelectRows([])
@@ -472,7 +451,6 @@ describe("QuicksignService", () => {
 			})
 
 			expect(enpDocumentTypes.resolveAndValidateSelection).not.toHaveBeenCalled()
-			expect(dc.addSigner).not.toHaveBeenCalled()
 			expect(mockDb.insert).toHaveBeenCalledTimes(1)
 			expect(result.documentTypes).toEqual([])
 		})

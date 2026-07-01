@@ -76,7 +76,7 @@ export interface RegistryAct {
 		signatureAcknowledgment: string | null
 		signatureImageData?: string | null
 	}[]
-	/** IEN checkbox acknowledgments before DocOnChain signing. */
+	/** IEN checkbox acknowledgments before signing. */
 	ienNotarialAttestations: {
 		role: "enp" | "principal" | "witness"
 		signerName: string
@@ -88,11 +88,11 @@ export interface RegistryAct {
 	location: string
 	/** Stored `document_url` on the registry act, when set. */
 	documentUrl: string
-	/** Meeting-sourced acts: file object id used to resolve DocOnChain notarized PDF. */
+	/** Meeting-sourced acts: file object id used to resolve notarized PDF. */
 	documentFileObjectId: string | null
-	/** DocOnChain project UUID when the act was created from a meeting signing flow. */
+	/** project UUID when the act was created from a meeting signing flow. */
 	projectUuid: string | null
-	/** DOC Verify code from DocOnChain vault (on sealed PDF / QR). */
+	/** DOC Verify code vault (on sealed PDF / QR). */
 	documentCode: string | null
 	/** ENB inspect/copy and CTC requests linked to this registry entry. */
 	enbAccessRequests: EnbAccessRequest[]
@@ -102,7 +102,7 @@ export interface RegistryAct {
 	commissionInactive: boolean
 }
 
-/** Download filename for DocOnChain notarized PDF (`document_url` rows). */
+/** Download filename for notarized PDF (`document_url` rows). */
 export function notarizedPdfDownloadFilename(
 	act: Pick<RegistryAct, "documentTitle" | "registryNo">
 ): string {

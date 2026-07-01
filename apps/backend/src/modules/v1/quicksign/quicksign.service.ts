@@ -20,20 +20,14 @@ import {
 	users,
 } from "@repo/db/schema"
 
-import {
-	DoconchainAdapterService,
-	isDoconchainProjectCompleted,
-} from "@/services/doconchain/doconchain-adapter.service"
 import { LocalSigningService } from "@/services/signing/local-signing.service"
 import { LocalStorageService } from "@/services/storage/local-storage.service"
-import { DoconchainProjectProvisionService } from "@/services/doconchain/doconchain-project-provision.service"
-import { generateDoconchainSignLink } from "@/services/doconchain/generate-sign-link"
 import { EMAIL_ADAPTER, type EmailAdapter } from "@/services/email/email-adapter"
 import { NotarizedPdfDeliveryService } from "@/services/email/notarized-pdf-delivery.service"
 import { buildQuicksignSessionInviteEmail } from "@/services/email/quicksign-session-invite-email"
 import { db } from "@/common/database/database.client"
 import type { QlegalSessionContext } from "@/common/session/qlegal-session.types"
-import { env, publicAppUrl } from "@/config/env.config"
+import { publicAppUrl } from "@/config/env.config"
 
 import { assertEnpCommissionAllowsNotarialActs } from "../auth-profile/lib/assert-enp-commission-active"
 import { assertEnpSessionAccess } from "../auth-profile/lib/assert-enp-session-access"
@@ -84,8 +78,6 @@ export class QuicksignService {
 
 	constructor(
 		private readonly files: FilesService,
-		private readonly dc: DoconchainAdapterService,
-		private readonly doconchainProvision: DoconchainProjectProvisionService,
 		@Inject(EMAIL_ADAPTER) private readonly email: EmailAdapter,
 		private readonly events: EventsService,
 		@Inject(forwardRef(() => SessionsService))
@@ -262,18 +254,10 @@ export class QuicksignService {
 		let signingComplete = row.status === "completed"
 		let registrySynced = false
 
-		if (row.doconchainProjectUuid?.trim() && row.appointmentId) {
-			const enp = await this.loadEnpRow(ctx.userId)
-			if (enp?.email) {
-				const progress = await this.syncSigningProgressForProject(row, enp.email.trim())
-				signingComplete = progress.signingComplete
-				registrySynced = progress.registrySynced
-			}
-		} else if (row.doconchainProjectUuid?.trim()) {
-			const enp = await this.loadEnpRow(ctx.userId)
-			if (enp?.email) {
-				await this.syncSignatoriesFromDoconchain(id, row.doconchainProjectUuid, enp.email)
-			}
+		if (row.appointmentId) {
+			const progress = await this.syncSigningProgressForProject(row)
+			signingComplete = progress.signingComplete
+			registrySynced = progress.registrySynced
 		}
 
 		const [freshRow] = await db
@@ -354,38 +338,6 @@ export class QuicksignService {
 		}
 		const signers = await this.loadSigners(inserted.id)
 		return this.shapeProject(updated!, signers)
-	}
-
-	async retryDcProject(ctx: QlegalSessionContext | null, id: string) {
-		ctx = await this.assertEnp(ctx)
-		await this.assertCommissionForNotarialActs(ctx)
-		const subOrgIds = await this.resolveSubOrgIds(ctx)
-		const row = await this.loadProjectForEnp(id, ctx.userId)
-		await this.assertQsDocumentFile(row.documentFileObjectId, ctx.userId, subOrgIds)
-
-		try {
-			const uuid = await this.doconchainProvision.createProjectUuidFromPdfFile({
-				enpUserId: ctx.userId,
-				subOrgIds,
-				fileObjectId: row.documentFileObjectId,
-				documentName: row.title,
-				logContext: "quicksign.retryDcProject",
-			})
-			const [updated] = await db
-				.update(quicksignProjects)
-				.set({
-					doconchainProjectUuid: uuid,
-					status: "pending_signatures",
-					updatedAt: new Date(),
-				})
-				.where(eq(quicksignProjects.id, id))
-				.returning()
-			const signers = await this.loadSigners(id)
-			return this.shapeProject(updated!, signers)
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e)
-			throwQuicksign("DC_PROJECT_CREATE_FAILED", `Retry failed: ${msg.slice(0, 280)}`)
-		}
 	}
 
 	async addSigner(
@@ -622,16 +574,16 @@ export class QuicksignService {
 		return Boolean(row)
 	}
 
-	private async syncMeetingSignaturesFromDoconchain(
+	/**
+	 * Check meeting signature status locally by cross-referencing quicksignSigners.signedAt.
+	 * When a signer stamps their signature locally, quicksignSigners.signedAt is set,
+	 * and meetingSignatureRequests is updated to "signed" as well.
+	 */
+	private async syncMeetingSignaturesLocal(
 		appointmentId: string,
 		documentFileId: string,
-		projectUuid: string,
-		enpEmail: string
-	): Promise<{ allSigned: boolean; dcCompleted: boolean }> {
-		const token = await this.dc.getAccessToken(enpEmail, { allowOrgFallback: false })
-		const details = await this.dc.getProjectDetails({ token, projectUuid })
-		if (!details) return { allSigned: false, dcCompleted: false }
-
+		projectId: string
+	): Promise<{ allSigned: boolean }> {
 		const reqRows = await db
 			.select({
 				id: meetingSignatureRequests.id,
@@ -648,6 +600,8 @@ export class QuicksignService {
 
 		const now = new Date()
 		for (const row of reqRows) {
+			if (row.status === "signed") continue
+
 			const [user] = await db
 				.select({ email: users.email })
 				.from(users)
@@ -656,12 +610,23 @@ export class QuicksignService {
 			const emailNorm = user?.email?.trim().toLowerCase()
 			if (!emailNorm) continue
 
-			const dcSigner = details.signers.find(s => s.email.trim().toLowerCase() === emailNorm)
-			if (!dcSigner?.signedAt || row.status === "signed") continue
+			// Check if the signer has signed locally (signedAt set by LocalSigningService)
+			const [signer] = await db
+				.select({ signedAt: quicksignSigners.signedAt })
+				.from(quicksignSigners)
+				.where(
+					and(
+						eq(quicksignSigners.projectId, projectId),
+						eq(quicksignSigners.email, emailNorm)
+					)
+				)
+				.limit(1)
+
+			if (!signer?.signedAt) continue
 
 			await db
 				.update(meetingSignatureRequests)
-				.set({ status: "signed", signedAt: dcSigner.signedAt, updatedAt: now })
+				.set({ status: "signed", signedAt: signer.signedAt, updatedAt: now })
 				.where(eq(meetingSignatureRequests.id, row.id))
 		}
 
@@ -676,69 +641,53 @@ export class QuicksignService {
 			)
 
 		const allSigned = refreshed.length > 0 && refreshed.every(r => r.status === "signed")
-		const dcCompleted = isDoconchainProjectCompleted(details)
-		return { allSigned: allSigned || dcCompleted, dcCompleted }
+		return { allSigned }
 	}
 
+	/**
+	 * Check signing progress locally — no external calls.
+	 * Signing is tracked via quicksignSigners.signedAt (set by LocalSigningService.stampSignature).
+	 */
 	private async syncSigningProgressForProject(
-		row: ProjectRow,
-		enpEmail: string
+		row: ProjectRow
 	): Promise<{ signingComplete: boolean; registrySynced: boolean }> {
-		const projectUuid = row.doconchainProjectUuid?.trim()
 		const appointmentId = row.appointmentId
-		if (!projectUuid) {
-			return { signingComplete: row.status === "completed", registrySynced: false }
-		}
 
-		await this.syncSignatoriesFromDoconchain(row.id, projectUuid, enpEmail)
+		// Check local signer signedAt timestamps
+		const signers = await this.loadSigners(row.id)
+		const allSigned = signers.length > 0 && signers.every(s => s.signedAt !== null)
 
-		let allSigned = false
-		let dcCompleted = false
-
+		// For meeting documents, also check meetingSignatureRequests
+		let meetingAllSigned = false
 		if (appointmentId) {
-			const meeting = await this.syncMeetingSignaturesFromDoconchain(
+			const meeting = await this.syncMeetingSignaturesLocal(
 				appointmentId,
 				row.documentFileObjectId,
-				projectUuid,
-				enpEmail
+				row.id
 			)
-			allSigned = meeting.allSigned
-			dcCompleted = meeting.dcCompleted
-		} else {
-			try {
-				const token = await this.dc.getAccessToken(enpEmail, { allowOrgFallback: false })
-				const details = await this.dc.getProjectDetails({ token, projectUuid })
-				dcCompleted = Boolean(details && isDoconchainProjectCompleted(details))
-				const signers = await this.loadSigners(row.id)
-				allSigned = signers.length > 0 && signers.every(s => s.signedAt !== null)
-			} catch {
-				/* DC unavailable */
-			}
+			meetingAllSigned = meeting.allSigned
 		}
 
-		if (allSigned || dcCompleted) {
+		const signingComplete = allSigned || meetingAllSigned || row.status === "completed"
+
+		if (signingComplete && row.status !== "completed") {
 			const now = new Date()
-			if (row.status !== "completed") {
-				await db
-					.update(quicksignProjects)
-					.set({ status: "completed", completedAt: now, updatedAt: now })
-					.where(eq(quicksignProjects.id, row.id))
-			}
+			await db
+				.update(quicksignProjects)
+				.set({ status: "completed", completedAt: now, updatedAt: now })
+				.where(eq(quicksignProjects.id, row.id))
 			if (!row.notarizedPdfEmailedAt) {
 				this.notarizedPdfDelivery.scheduleDeliveryForQuicksignProject(row.id)
 			}
 		}
 
 		if (!appointmentId) {
-			return {
-				signingComplete: allSigned || dcCompleted || row.status === "completed",
-				registrySynced: false,
-			}
+			return { signingComplete, registrySynced: false }
 		}
 
 		let registrySynced = await this.hasRegistryActForAppointment(appointmentId, row.enpUserId)
 
-		if (dcCompleted && !registrySynced) {
+		if (signingComplete && !registrySynced) {
 			try {
 				const { created } = await this.registry.syncActsFromEndedMeeting({
 					appointmentId,
@@ -759,60 +708,7 @@ export class QuicksignService {
 			}
 		}
 
-		return {
-			signingComplete: allSigned || dcCompleted || row.status === "completed",
-			registrySynced,
-		}
-	}
-
-	private async syncSignatoriesFromDoconchain(
-		projectId: string,
-		projectUuid: string,
-		enpEmail: string
-	): Promise<void> {
-		try {
-			const token = await this.dc.getAccessToken(enpEmail, { allowOrgFallback: false })
-			const details = await this.dc.getProjectDetails({ token, projectUuid })
-			if (!details?.signers.length) return
-
-			const localSigners = await this.loadSigners(projectId)
-			const now = new Date()
-			for (const local of localSigners) {
-				const dcSigner = details.signers.find(
-					s => s.email.trim().toLowerCase() === local.email.trim().toLowerCase()
-				)
-				if (!dcSigner?.signedAt) continue
-				if (local.signedAt && local.signedAt >= dcSigner.signedAt) continue
-				await db
-					.update(quicksignSigners)
-					.set({ signedAt: dcSigner.signedAt, updatedAt: now })
-					.where(eq(quicksignSigners.id, local.id))
-			}
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e)
-			this.log.debug(`QuickSign DC signer sync skipped: ${msg.slice(0, 160)}`)
-		}
-	}
-
-	private async resolveSignDocumentUrl(
-		projectUuid: string,
-		signerEmail: string,
-		projectOwnerEmail: string
-	): Promise<string> {
-		try {
-			return await generateDoconchainSignLink(this.dc, {
-				projectUuid,
-				signerEmail,
-				projectOwnerEmail,
-			})
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e)
-			this.log.warn(
-				`QuickSign sign link fallback for ${projectUuid.slice(0, 8)}…: ${msg.slice(0, 120)}`
-			)
-			const app = env.DOCONCHAIN_APP_URL ?? "https://stg-app.doconchain.com"
-			return `${app.replace(/\/$/, "")}/sign/${projectUuid}`
-		}
+		return { signingComplete, registrySynced }
 	}
 
 	private principalSignerStatusFromSigners(
@@ -880,7 +776,6 @@ export class QuicksignService {
 		const durationMinutes = input.durationMinutes ?? 60
 		const title = input.title?.trim() || row.title
 		const description = [row.description, input.notes?.trim()].filter(Boolean).join("\n\n") || null
-		const projectUuid = row.doconchainProjectUuid.trim()
 
 		const [apt] = await db
 			.insert(appointments)
@@ -955,11 +850,9 @@ export class QuicksignService {
 		if (!enpRow?.email) {
 			throw new ORPCError("BAD_REQUEST", { message: "ENP profile email is required" })
 		}
-		const enpEmail = enpRow.email.trim()
 
 		const progress = await this.syncSigningProgressForProject(
-			{ ...row, appointmentId: apt.id },
-			enpEmail
+			{ ...row, appointmentId: apt.id }
 		)
 		const signersAfterSync = await this.loadSigners(row.id)
 
@@ -969,10 +862,7 @@ export class QuicksignService {
 					this.ienAttestation.buildIenSignPageUrl(apt.id, row.documentFileObjectId, "principal"),
 					this.ienAttestation.buildIenSignPageUrl(apt.id, row.documentFileObjectId, "enp"),
 				]
-			: await Promise.all([
-					this.resolveSignDocumentUrl(projectUuid, primarySigner.email, enpEmail),
-					this.resolveSignDocumentUrl(projectUuid, enpEmail, enpEmail),
-				])
+			: [clientJoinUrl, enpJoinUrl]
 		const signDocumentUrl = clientSignDocumentUrl
 		const principalSignerStatus = this.principalSignerStatusFromSigners(
 			primarySigner,

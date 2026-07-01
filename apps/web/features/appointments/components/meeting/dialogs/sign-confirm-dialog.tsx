@@ -34,7 +34,7 @@ export function SignConfirmDialog({
 				<DialogHeader>
 					<DialogTitle className="text-sm">Confirm document signing</DialogTitle>
 					<DialogDescription className="text-xs leading-relaxed">
-						Did you finish signing <strong>{label}</strong> in DocOnChain?
+						Did you finish signing <strong>{label}</strong> ?
 						<br />
 						<br />
 						Choose <strong>Yes</strong> only if you completed your signature on the document.

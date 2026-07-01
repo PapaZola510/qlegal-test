@@ -150,7 +150,7 @@ function DocumentPreview({ data }: { data: DeedOfDonationData }) {
 				</div>
 
 				<div className="mb-4">
-					<div className="mb-2">Name                          Government ID                    Date/Place Issued</div>
+					<div className="mb-2">Name             Government ID          Date/Place Issued</div>
 				</div>
 
 				<p className="text-justify mb-4">

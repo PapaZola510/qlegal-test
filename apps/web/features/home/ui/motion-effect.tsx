@@ -24,14 +24,14 @@ type MotionEffectProps = HTMLMotionProps<"div"> & {
 		| {
 				direction?: "up" | "down" | "left" | "right"
 				offset?: number
-		  }
+		 }
 		| boolean
 	fade?: { initialOpacity?: number; opacity?: number } | boolean
 	zoom?:
 		| {
 				initialScale?: number
 				scale?: number
-		  }
+		 }
 		| boolean
 }
 

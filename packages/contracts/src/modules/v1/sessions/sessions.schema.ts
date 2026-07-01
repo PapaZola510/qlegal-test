@@ -280,7 +280,7 @@ export const MarkMeetingDocumentPlottedInputSchema = z.object({
 	signatureFields: z.array(PlotSignatureFieldSchema).optional(),
 })
 
-/** After DocOnChain signing window closes — marks meeting_signature_requests row SIGNED for the current user. */
+/** After Signing window closes — marks meeting_signature_requests row SIGNED for the current user. */
 export const MarkSignedForCurrentUserInputSchema = z.object({
 	documentId: z.string().min(1),
 	meetingId: z.string().min(1),
@@ -323,7 +323,7 @@ export const ListMeetingDocumentSignersInputSchema = z.object({
 
 export const MeetingDocumentSignerStatusSchema = z.object({
 	userId: z.string(),
-	// Avoid `.email()` here: DocOnChain / legacy rows may hold non-RFC strings; strict validation caused HTTP 500 on listSigners.
+	// Avoid `.email()` here: / legacy rows may hold non-RFC strings; strict validation caused HTTP 500 on listSigners.
 	email: z.string().min(1),
 	displayName: z.string(),
 	sequence: z.number().int().nonnegative(),
@@ -387,19 +387,19 @@ export const ListMeetingDocumentSignersResultSchema = z.object({
 	plotCompletedAt: z.string().nullable(),
 	/** QuickSign project internal id — used to call saveSignatureFields. */
 	projectId: z.string().nullable(),
-	/** Authoritative DocOnChain create-project id — always read from server, never cached client UUID. */
+	/** Authoritative create-project id — always read from server, never cached client UUID. */
 	doconchainProjectUuid: z.string().nullable(),
 	/**
 	 * Runtime HTTPS URL to the sealed PDF (from vault `files[].file_url` or project GET).
-	 * Resolved via `doconchainProjectUuid` only — DocOnChain vault list row `uuid` is never persisted.
+	 * Resolved via `doconchainProjectUuid` only — Registry list row `uuid` is never persisted.
 	 */
 	// Relaxed from `.url()`: DC occasionally returns odd-but-fetchable URLs; strict output validation surfaced as HTTP 500.
 	notarizedDocumentUrl: z.string().nullable(),
 	/** QuickSign project status for this meeting document (`quicksign_projects.status`). */
 	notarizationStatus: QuicksignStatusEnum.nullable(),
-	/** Sealed PDF copied from DocOnChain into our object storage (`notarized_file_object_id`). */
+	/** Sealed PDF copied from into our object storage (`notarized_file_object_id`). */
 	notarizedStoredInDb: z.boolean(),
-	/** View/Download enabled when DocOnChain has published the sealed notarized PDF (`Document Completed` or vault completed). */
+	/** View/Download enabled when has published the sealed notarized PDF (`Document Completed` or vault completed). */
 	notarizedPdfReady: z.boolean(),
 })
 
@@ -487,6 +487,15 @@ export const MeetingEnbSigningWsEventSchema = z.object({
 	status: MeetingEnbSigningStatusEnum,
 	pendingCount: z.number().int().nonnegative(),
 	signedCount: z.number().int().nonnegative(),
+})
+
+export const ReSignNotarizedDocumentInputSchema = z.object({
+	meetingId: z.string().min(1),
+	documentId: z.string().min(1),
+})
+
+export const ReSignNotarizedDocumentResultSchema = z.object({
+	ok: z.boolean(),
 })
 
 export type MeetingEnbSigningStatus = z.infer<typeof MeetingEnbSigningStatusSchema>

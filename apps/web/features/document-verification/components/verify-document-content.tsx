@@ -95,11 +95,10 @@ export function VerifyDocumentContent() {
 			<div className="space-y-2 text-center">
 				<h1 className="text-2xl font-semibold tracking-tight">Verify Notarized Document</h1>
 				<p className="text-muted-foreground text-sm">
-					Confirm that a notarized PDF from Quanby Legal is authentic and untampered using
-					DocOnChain DOC Verify.
+					Confirm that a notarized PDF from Quanby Legal is authentic and untampered.
 				</p>
 				<p className="text-muted-foreground text-xs">
-					The <strong>document code</strong> is assigned by DocOnChain when notarization completes.
+					The <strong>document code</strong> is assigned when notarization completes.
 					Find it on the sealed PDF, in the QR, or in your{" "}
 					<a href="/registry" className="underline underline-offset-2">
 						Notarial Book
@@ -243,44 +242,39 @@ export function VerifyDocumentContent() {
 									<span>{new Date(result.verifiedAt).toLocaleString()}</span>
 								</div>
 							</div>
-							{result.doconchainDetails ? (
+							{result.verificationDetails ? (
 								<div className="space-y-3 border-t pt-3">
 									<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-										DocOnChain verification details
+										Verification details
 									</p>
-									{result.doconchainDetails.documentName ? (
+									{result.verificationDetails.documentName ? (
 										<div className="flex justify-between gap-4 text-sm">
-											<span className="text-muted-foreground shrink-0">Document</span>
-											<span className="text-right">{result.doconchainDetails.documentName}</span>
+											<span className="text-muted-foreground shrink-0">Document</span>												<span className="text-right">{result.verificationDetails.documentName}</span>
 										</div>
 									) : null}
-									{result.doconchainDetails.projectName ? (
+									{result.verificationDetails.projectName ? (
 										<div className="flex justify-between gap-4 text-sm">
-											<span className="text-muted-foreground shrink-0">Project</span>
-											<span className="text-right">{result.doconchainDetails.projectName}</span>
+											<span className="text-muted-foreground shrink-0">Project</span>												<span className="text-right">{result.verificationDetails.projectName}</span>
 										</div>
 									) : null}
-									{result.doconchainDetails.projectReferenceNumber ? (
+									{result.verificationDetails.projectReferenceNumber ? (
 										<div className="flex justify-between gap-4 text-sm">
 											<span className="text-muted-foreground shrink-0">Reference</span>
-											<span className="text-right font-mono">
-												{result.doconchainDetails.projectReferenceNumber}
+											<span className="text-right font-mono">													{result.verificationDetails.projectReferenceNumber}
 											</span>
 										</div>
 									) : null}
-									{result.doconchainDetails.verificationDate ? (
+									{result.verificationDetails.verificationDate ? (
 										<div className="flex justify-between gap-4 text-sm">
-											<span className="text-muted-foreground shrink-0">DocOnChain verified</span>
-											<span className="text-right">
-												{new Date(result.doconchainDetails.verificationDate).toLocaleString()}
+											<span className="text-muted-foreground shrink-0">verified</span>
+											<span className="text-right">															{new Date(result.verificationDetails.verificationDate).toLocaleString()}
 											</span>
 										</div>
 									) : null}
-									{result.doconchainDetails.signers.length > 0 ? (
+									{result.verificationDetails.signers.length > 0 ? (
 										<div className="space-y-2">
 											<p className="text-muted-foreground text-xs">Signers</p>
-											<ul className="space-y-2 text-sm">
-												{result.doconchainDetails.signers.map(signer => (
+											<ul className="space-y-2 text-sm">													{result.verificationDetails.signers.map(signer => (
 													<li
 														key={`${signer.email}-${signer.signedAt ?? ""}`}
 														className="rounded-md border px-3 py-2"
@@ -336,7 +330,7 @@ export function VerifyDocumentContent() {
 			) : null}
 
 			<p className="text-muted-foreground text-center text-xs">
-				Verification is performed by DocOnChain DOC Verify. Lookups are rate-limited per IP.
+				Verification is performed against our notarial records. Lookups are rate-limited per IP.
 			</p>
 
 			{result?.isValid && result.certificateAccessKey && result.hasCertificateOfCompletion ? (
@@ -345,7 +339,7 @@ export function VerifyDocumentContent() {
 						<DialogHeader className="border-b px-4 py-3">
 							<DialogTitle className="text-sm">Certificate of Completion</DialogTitle>
 							<DialogDescription className="text-xs">
-								Official DocOnChain audit trail for this notarized document (signature timestamps,
+								Official audit trail for this notarized document (signature timestamps,
 								authentication key, and recipient activity).
 							</DialogDescription>
 						</DialogHeader>

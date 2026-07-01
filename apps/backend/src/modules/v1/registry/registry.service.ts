@@ -60,10 +60,6 @@ import {
 	users,
 } from "@repo/db/schema"
 
-import {
-	DoconchainAdapterService,
-	isDoconchainProjectCompleted,
-} from "@/services/doconchain/doconchain-adapter.service"
 import { NotarizedPdfArchiveService } from "@/services/notarized-pdf/notarized-pdf-archive.service"
 import { ScRegistryAdapterService } from "@/services/sc-registry/sc-registry-adapter.service"
 import { defaultScAddress } from "@/services/sc-registry/supreme-court-client.js"
@@ -231,32 +227,47 @@ function formatEnpPartyName(row: {
 const MEETING_FILE_DEDUPE_PREFIX = "qlegal-file:"
 const MEETING_DC_DEDUPE_PREFIX = "qlegal-dc:"
 const MEETING_DC_CODE_PREFIX = "qlegal-dc-code:"
+const QLEGAL_CODE_PREFIX = "qlegal-code:"
+const QLEGAL_HASH_PREFIX = "qlegal-hash:"
 
 function registryActDescription(
 	doconchainProjectUuid: string,
 	fileObjectId: string,
-	doconchainDocumentCode?: string | null
+	qlegalCode?: string | null,
+	qlegalHash?: string | null
 ): string {
 	const parts = [
 		`${MEETING_DC_DEDUPE_PREFIX}${doconchainProjectUuid.trim()}`,
 		`${MEETING_FILE_DEDUPE_PREFIX}${fileObjectId}`,
 	]
-	const code = doconchainDocumentCode?.trim()
-	if (code) parts.push(`${MEETING_DC_CODE_PREFIX}${code}`)
+	if (qlegalCode) parts.push(`${QLEGAL_CODE_PREFIX}${qlegalCode.trim()}`)
+	if (qlegalHash) parts.push(`${QLEGAL_HASH_PREFIX}${qlegalHash.trim()}`)
 	return parts.join("|")
+}
+
+function parseDescriptionValue(description: string | null | undefined, prefix: string): string | null {
+	if (!description?.trim()) return null
+	for (const segment of description.split("|")) {
+		const trimmed = segment.trim()
+		if (trimmed.startsWith(prefix)) {
+			const val = trimmed.slice(prefix.length).trim()
+			return val || null
+		}
+	}
+	return null
 }
 
 function parseRegistryActDescription(description: string | null | undefined): {
 	documentFileObjectId: string | null
 	doconchainProjectUuid: string | null
-	doconchainDocumentCode: string | null
+	documentCode: string | null
 } {
 	if (!description?.trim()) {
-		return { documentFileObjectId: null, doconchainProjectUuid: null, doconchainDocumentCode: null }
+		return { documentFileObjectId: null, doconchainProjectUuid: null, documentCode: null }
 	}
 	let documentFileObjectId: string | null = null
 	let doconchainProjectUuid: string | null = null
-	let doconchainDocumentCode: string | null = null
+	let documentCode: string | null = null
 
 	const segments = description.includes("|") ? description.split("|") : [description]
 	for (const part of segments) {
@@ -265,13 +276,13 @@ function parseRegistryActDescription(description: string | null | undefined): {
 			documentFileObjectId = segment.slice(MEETING_FILE_DEDUPE_PREFIX.length).trim() || null
 		}
 		if (segment.startsWith(MEETING_DC_CODE_PREFIX)) {
-			doconchainDocumentCode = segment.slice(MEETING_DC_CODE_PREFIX.length).trim() || null
+			documentCode = segment.slice(MEETING_DC_CODE_PREFIX.length).trim() || null
 		} else if (segment.startsWith(MEETING_DC_DEDUPE_PREFIX)) {
 			doconchainProjectUuid = segment.slice(MEETING_DC_DEDUPE_PREFIX.length).trim() || null
 		}
 	}
 
-	return { documentFileObjectId, doconchainProjectUuid, doconchainDocumentCode }
+	return { documentFileObjectId, doconchainProjectUuid, documentCode }
 }
 
 function mergeDocumentCodeIntoDescription(
@@ -315,7 +326,7 @@ function rowToAct(
 	appointmentPurpose: string | null = null
 ): RegistryAct {
 	const parties = row.parties as { name: string; role: string }[]
-	const { documentFileObjectId, doconchainProjectUuid, doconchainDocumentCode } =
+	const { documentFileObjectId, doconchainProjectUuid, documentCode } =
 		parseRegistryActDescription(row.description)
 
 	return {
@@ -333,7 +344,7 @@ function rowToAct(
 		documentUrl: row.documentUrl ?? null,
 		documentFileObjectId,
 		doconchainProjectUuid,
-		doconchainDocumentCode,
+		documentCode,
 		scStatus: row.scStatus,
 		scSubmittedAt: toIso(row.scSubmittedAt),
 		scSyncedAt: toIso(row.scSyncedAt),
@@ -360,7 +371,6 @@ export class RegistryService {
 
 	constructor(
 		private readonly scRegistry: ScRegistryAdapterService,
-		private readonly dc: DoconchainAdapterService,
 		private readonly files: FilesService,
 		private readonly notarizedArchive: NotarizedPdfArchiveService,
 		private readonly enbBackup: EnbBackupService
@@ -524,24 +534,7 @@ export class RegistryService {
 			}
 
 			const enpEmail = await this.loadEnpEmail(args.enpUserId)
-			if (!enpEmail) {
-				this.log.warn(
-					`Registry populate skipped for appointment ${args.appointmentId}: ENP has no email for DocOnChain token`
-				)
-				return { created: 0, skipped: 0 }
-			}
-			const enpEmailNorm = enpEmail.toLowerCase()
-
-			let dcToken: string
-			try {
-				dcToken = await this.dc.getAccessToken(enpEmail, { allowMock: false })
-			} catch (e) {
-				const msg = e instanceof Error ? e.message : String(e)
-				this.log.warn(
-					`Registry populate: DocOnChain token failed for appointment ${args.appointmentId}: ${msg.slice(0, 200)}`
-				)
-				return { created: 0, skipped: 0 }
-			}
+			const enpEmailNorm = enpEmail?.toLowerCase() ?? ""
 
 			const [enpProf] = await db
 				.select({
@@ -626,31 +619,18 @@ export class RegistryService {
 					continue
 				}
 
-				const dcDetails = await this.dc.getProjectDetails({ token: dcToken, projectUuid })
-				if (!dcDetails) {
+				if (project.status !== "completed") {
 					skipped++
 					this.log.debug(
-						`Registry populate: no DocOnChain project details for ${projectUuid.slice(0, 8)}… (appointment ${args.appointmentId})`
+						`Registry populate: project ${projectUuid.slice(0, 8)}… not completed (status=${project.status})`
 					)
 					continue
 				}
+
 				const meetingRows = await this.loadMeetingSignatureRows(
 					args.appointmentId,
 					link.fileObjectId
 				)
-				const meetingSignaturesComplete =
-					meetingRows.length > 0 && meetingRows.every(r => r.status === "signed")
-				const dcCompleted = isDoconchainProjectCompleted(dcDetails)
-				if (
-					!dcCompleted &&
-					!(args.allowWhenMeetingSignaturesComplete && meetingSignaturesComplete)
-				) {
-					skipped++
-					this.log.debug(
-						`Registry populate: DocOnChain project ${projectUuid.slice(0, 8)}… not COMPLETED at end (status=${dcDetails.projectStatus ?? "—"})`
-					)
-					continue
-				}
 
 				const signers = await db
 					.select()
@@ -686,18 +666,8 @@ export class RegistryService {
 							? new Date(project.completedAt)
 							: meetingEndedAt
 
-				let doconchainDocumentCode: string | null = null
-				try {
-					doconchainDocumentCode = await this.dc.fetchVaultDocumentCode({
-						token: dcToken,
-						projectUuid,
-					})
-				} catch (e) {
-					const msg = e instanceof Error ? e.message : String(e)
-					this.log.debug(
-						`Registry populate: vault document code skipped for ${projectUuid.slice(0, 8)}… — ${msg.slice(0, 120)}`
-					)
-				}
+				const qlegalCode = parseDescriptionValue(project.description, "qlegal-code:")
+				const qlegalHash = parseDescriptionValue(project.description, "qlegal-hash:")
 
 				candidates.push({
 					link,
@@ -712,7 +682,8 @@ export class RegistryService {
 					description: registryActDescription(
 						projectUuid,
 						link.fileObjectId,
-						doconchainDocumentCode
+						qlegalCode,
+						qlegalHash
 					),
 				})
 			}
@@ -776,7 +747,7 @@ export class RegistryService {
 
 			const summary = `Ended meeting ${args.appointmentId}: ${created} registry act(s) created, ${skipped} document(s) skipped`
 			if (created === 0 && skipped > 0) {
-				this.log.warn(`${summary} — check debug logs for DocOnChain COMPLETED / dedupe skips`)
+				this.log.warn(`${summary} — check debug logs for completion status / dedupe skips`)
 			} else {
 				this.log.log(summary)
 			}
@@ -790,22 +761,11 @@ export class RegistryService {
 	}
 
 	private async tryPersistNotarizedPdfUrl(
-		enpUserId: string,
-		actId: string,
-		documentFileObjectId: string
+		_enpUserId: string,
+		_actId: string,
+		_documentFileObjectId: string
 	): Promise<void> {
-		try {
-			const url = await this.resolveNotarizedPdfUrlForRegistryAct(enpUserId, documentFileObjectId)
-			if (!url) return
-			await db
-				.update(registryActs)
-				.set({ documentUrl: url, updatedAt: new Date() })
-				.where(eq(registryActs.id, actId))
-			this.scheduleEnbBackup(actId)
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e)
-			this.log.debug(`Notarized PDF backfill skipped for act ${actId}: ${msg.slice(0, 160)}`)
-		}
+		/* documentUrl is unused in local flow — no-op */
 	}
 
 	/**
@@ -1089,43 +1049,6 @@ export class RegistryService {
 			.limit(1)
 		return row?.email?.trim() ?? null
 	}
-
-	private async resolveNotarizedPdfUrlForRegistryAct(
-		enpUserId: string,
-		documentFileObjectId: string
-	): Promise<string | null> {
-		try {
-			const qs = await this.loadQuicksignProjectForDocument(enpUserId, documentFileObjectId)
-			const projectUuid = qs?.doconchainProjectUuid?.trim()
-			if (!projectUuid) return null
-
-			const enpEmail = await this.loadEnpEmail(enpUserId)
-			if (!enpEmail) return null
-
-			const token = await this.dc.getAccessToken(enpEmail, { allowOrgFallback: false })
-
-			let url = await this.dc.fetchSignedPdfUrlFromProjectFast({ token, projectUuid })
-			if (!url?.startsWith("http")) {
-				const vault = await this.dc.resolveVaultNotarizedPdf({
-					token,
-					projectUuid,
-					maxVaultListPages: 3,
-				})
-				if (vault.outcome === "ok" && vault.signedPdfUrl?.startsWith("http")) {
-					url = vault.signedPdfUrl
-				}
-			}
-			return url?.startsWith("http") ? url : null
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e)
-			this.log.warn(`Registry notarized PDF URL resolve failed: ${msg.slice(0, 240)}`)
-			return null
-		}
-	}
-
-	/**
-	 * Fetches the sealed notarized PDF URL from DocOnChain and stores it on the act when found.
-	 */
 	async refreshActNotarizedDocument(
 		enpUserId: string,
 		actId: string
@@ -1133,7 +1056,7 @@ export class RegistryService {
 		const { row } = await this.loadActRowForEnp(enpUserId, actId)
 		const parsed = parseRegistryActDescription(row.description)
 		const documentFileObjectId = parsed.documentFileObjectId
-		let documentCode = parsed.doconchainDocumentCode
+		const documentCode = parseDescriptionValue(row.description, QLEGAL_CODE_PREFIX)
 
 		if (!documentFileObjectId) {
 			return {
@@ -1144,33 +1067,6 @@ export class RegistryService {
 		}
 
 		const qs = await this.loadQuicksignProjectForDocument(enpUserId, documentFileObjectId)
-		const projectUuid = qs?.doconchainProjectUuid?.trim() || parsed.doconchainProjectUuid?.trim()
-
-		if (!documentCode && projectUuid) {
-			const enpEmail = await this.loadEnpEmail(enpUserId)
-			if (enpEmail) {
-				try {
-					const token = await this.dc.getAccessToken(enpEmail, { allowOrgFallback: false })
-					documentCode = await this.dc.fetchVaultDocumentCode({ token, projectUuid })
-					if (documentCode) {
-						const now = new Date()
-						await db
-							.update(registryActs)
-							.set({
-								description: mergeDocumentCodeIntoDescription(row.description, documentCode),
-								updatedAt: now,
-							})
-							.where(eq(registryActs.id, actId))
-						this.scheduleEnbBackup(actId)
-					}
-				} catch (e) {
-					const msg = e instanceof Error ? e.message : String(e)
-					this.log.debug(
-						`Registry refresh: vault document code failed for act ${actId.slice(0, 8)}… — ${msg.slice(0, 120)}`
-					)
-				}
-			}
-		}
 
 		if (qs?.notarizedFileObjectId) {
 			return { available: true, documentUrl: row.documentUrl ?? null, documentCode }
@@ -1183,19 +1079,7 @@ export class RegistryService {
 			return { available: true, documentUrl: row.documentUrl, documentCode }
 		}
 
-		const url = await this.resolveNotarizedPdfUrlForRegistryAct(enpUserId, documentFileObjectId)
-		if (!url) {
-			return { available: false, documentUrl: null, documentCode }
-		}
-
-		const now = new Date()
-		await db
-			.update(registryActs)
-			.set({ documentUrl: url, updatedAt: now })
-			.where(eq(registryActs.id, actId))
-		this.scheduleEnbBackup(actId)
-
-		return { available: true, documentUrl: url, documentCode }
+		return { available: false, documentUrl: null, documentCode }
 	}
 
 	async streamActNotarizedPdf(
@@ -1209,13 +1093,13 @@ export class RegistryService {
 		const documentFileObjectId = parseRegistryActDescription(row.description).documentFileObjectId
 		if (!documentFileObjectId) {
 			throw new BadRequestException(
-				"This registry entry has no linked meeting document for DocOnChain"
+				"This registry entry has no linked meeting document"
 			)
 		}
 
 		const qs = await this.loadQuicksignProjectForDocument(enpUserId, documentFileObjectId)
-		if (!qs?.doconchainProjectUuid?.trim()) {
-			throw new BadRequestException("DocOnChain project is required")
+		if (!qs?.id) {
+			throw new BadRequestException("Meeting document not found")
 		}
 
 		await this.notarizedArchive.streamQuicksignNotarizedPdf(qs.id, res, {
@@ -1634,25 +1518,19 @@ export class RegistryService {
 	private async loadPdfBytesForRegistryAct(
 		enpUserId: string,
 		row: typeof registryActs.$inferSelect,
-		opts?: { forScSync?: boolean }
+		_opts?: { forScSync?: boolean }
 	): Promise<{ bytes: Buffer; fileName: string } | null> {
 		const { documentFileObjectId } = parseRegistryActDescription(row.description)
 		const title = row.title.trim() || "notarized_document.pdf"
 		const fileName = title.toLowerCase().endsWith(".pdf") ? title : `${title}.pdf`
 
-		let url = row.documentUrl?.trim()
-		if (!opts?.forScSync && !url?.startsWith("http") && documentFileObjectId) {
-			url =
-				(await this.resolveNotarizedPdfUrlForRegistryAct(enpUserId, documentFileObjectId)) ??
-				undefined
-		}
-		if (!url?.startsWith("http")) return null
+		if (!documentFileObjectId) return null
 
 		try {
-			const res = await fetch(url, { signal: AbortSignal.timeout(25_000) })
-			if (!res.ok) return null
-			const buf = Buffer.from(await res.arrayBuffer())
-			if (buf.length === 0) return null
+			const qs = await this.loadQuicksignProjectForDocument(enpUserId, documentFileObjectId)
+			if (!qs?.notarizedFileObjectId) return null
+			const buf = await this.files.readStoredFileBuffer(qs.notarizedFileObjectId)
+			if (!buf?.length) return null
 			return { bytes: buf, fileName }
 		} catch {
 			return null

@@ -1,4 +1,4 @@
-/** Sample values for DocOnChain / Supreme Court electronic notarial seal fields. */
+/** Sample values for / Supreme Court electronic notarial seal fields. */
 export const NOTARIAL_FIELD_HINTS = {
 	rollNumber: "94942",
 	rollDate: "5 June 2018",

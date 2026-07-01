@@ -142,7 +142,7 @@ export const appointmentsContract = {
 		.route({
 			method: "POST",
 			path: "/appointments/{id}/meeting-documents/{fileObjectId}/create-project",
-			summary: "Provision DocOnChain project for a previously-linked meeting document (ENP only)",
+			summary: "Provision project for a previously-linked meeting document (ENP only)",
 			tags: ["Appointments"],
 		})
 		.input(CreateMeetingDocumentProjectInputSchema)
@@ -283,7 +283,7 @@ export const appointmentsContract = {
 		.route({
 			method: "POST",
 			path: "/appointments/{id}/ien-attestation",
-			summary: "IEN: signer acknowledges the notarial statement before DocOnChain signing",
+			summary: "IEN: signer acknowledges the notarial statement before Signing",
 			tags: ["Appointments"],
 		})
 		.input(RecordAppointmentIenAttestationSchema)
@@ -303,7 +303,7 @@ export const appointmentsContract = {
 		.route({
 			method: "GET",
 			path: "/appointments/{id}/ien-sign-url",
-			summary: "IEN: resolve DocOnChain sign URL after the signer has acknowledged",
+			summary: "IEN: resolve sign URL after the signer has acknowledged",
 			tags: ["Appointments"],
 		})
 		.input(ResolveIenSignUrlSchema)

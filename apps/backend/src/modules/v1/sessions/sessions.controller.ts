@@ -308,6 +308,19 @@ export class SessionsController {
 		})
 	}
 
+	@Implement(v1.session.reSignNotarizedDocument)
+	async reSignNotarizedDocument(@Session() session: UserSession) {
+		return implement(v1.session.reSignNotarizedDocument).handler(async ({ input, context }) => {
+			requireAuthSession(session)
+			const qlegal = resolveQlegalContext(context, session)
+			return this.meetingSigners.reSignNotarizedDocument(
+				qlegal,
+				input.meetingId,
+				input.documentId
+			)
+		})
+	}
+
 	@Implement(v1.session.getMeetingEnbSigningStatus)
 	async getMeetingEnbSigningStatus(@Session() session: UserSession) {
 		return implement(v1.session.getMeetingEnbSigningStatus).handler(async ({ input, context }) => {

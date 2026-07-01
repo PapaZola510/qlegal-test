@@ -81,16 +81,6 @@ export function useMyEnpDocumentTypesQuery() {
 	})
 }
 
-export function useRetryQuicksignDcProjectMutation() {
-	const queryClient = useQueryClient()
-	return useMutation({
-		mutationFn: async (id: string) => (orpcClient as any).quicksign.retryDcProject({ id }),
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: api.quicksign.key() })
-		},
-	})
-}
-
 export function useAddQuicksignSignerMutation() {
 	const queryClient = useQueryClient()
 	return useMutation({

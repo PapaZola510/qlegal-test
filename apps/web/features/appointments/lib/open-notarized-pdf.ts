@@ -1,6 +1,6 @@
 import { getOrpcMutationErrorMessage } from "@/core/lib/orpc-error-message"
 
-/** Backend returns 425 when DocOnChain vault has not published the sealed PDF yet. */
+/** Backend returns 425 when vault has not published the sealed PDF yet. */
 const RETRYABLE_NOTARIZED_PDF_STATUS = new Set([425, 503])
 
 /** User-initiated View/Download — still patient while DC publishes the seal. */
@@ -121,7 +121,7 @@ async function fetchNotarizedPdfBlobFromNetwork(
 					continue
 				}
 				throw new Error(
-					"DocOnChain has not published the sealed notarized PDF yet. Wait a moment and try View again."
+					"has not published the sealed notarized PDF yet. Wait a moment and try View again."
 				)
 			}
 			return blob
@@ -137,7 +137,7 @@ async function fetchNotarizedPdfBlobFromNetwork(
 	}
 
 	throw new Error(
-		"DocOnChain has not published the sealed notarized PDF yet. Wait a moment and try View again."
+		"has not published the sealed notarized PDF yet. Wait a moment and try View again."
 	)
 }
 
@@ -229,7 +229,7 @@ export function prefetchNotarizedPdfBlob(
 	if (isPrefetchOnFailureCooldown(url)) {
 		onError?.(
 			new Error(
-				"DocOnChain has not published the sealed notarized PDF yet. Wait a moment and try View again."
+				"has not published the sealed notarized PDF yet. Wait a moment and try View again."
 			)
 		)
 		return () => undefined

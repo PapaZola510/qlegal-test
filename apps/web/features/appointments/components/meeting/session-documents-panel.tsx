@@ -286,7 +286,7 @@ function MeetingDocumentsPosTotal({
 								: "Total will update after the ENP sets fees on all documents."}
 						</p>
 					) : (paymentStatus?.breakdown?.totalPhp ?? feeSummary.totalFeePhp) > 0 &&
-					  !showPaymentStatus ? (
+					 !showPaymentStatus ? (
 						<p className="text-muted-foreground mt-2 text-center font-sans text-[11px] leading-relaxed">
 							{isClient
 								? "Pay this total in the Payment tab via QRPH."
@@ -370,7 +370,7 @@ function DocumentInstrumentCard({
 	const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
 	const serverProjectUuid =
 		signersResult?.doconchainProjectUuid?.trim() ?? attachment.doconchainProjectUuid?.trim() ?? null
-	const hasDoconchainProject = Boolean(serverProjectUuid)
+	const hasSigningProject = Boolean(serverProjectUuid)
 	const isPrincipalUpload = attachment.uploadedByPrincipal === true
 	const isCreatingProjectThis =
 		createProject.isPending && createProject.variables?.fileObjectId === attachment.fileObjectId
@@ -562,7 +562,7 @@ function DocumentInstrumentCard({
 				) : showFeeReadOnly ? (
 					<p className="text-muted-foreground text-xs">Fee: ₱{savedFeePhp.toLocaleString()}</p>
 				) : null}
-				{!hasDoconchainProject ? (
+				{!hasSigningProject ? (
 					isEnp ? (
 						<div className="flex flex-col gap-2 rounded-md border border-dashed p-3">
 							<p className="text-xs leading-relaxed">
@@ -604,7 +604,7 @@ function DocumentInstrumentCard({
 										size="sm"
 										className="h-8 text-xs"
 										disabled
-										title="Waiting for DocOnChain to publish the completed notarized document"
+										title="Waiting for to publish the completed notarized document"
 									>
 										<Spinner className="mr-1.5 size-3.5" />
 										Processing notarized PDF…
@@ -631,7 +631,7 @@ function DocumentInstrumentCard({
 										title={
 											notarizedStoredInDb
 												? "Sealed notarized PDF (stored copy)"
-												: "Sealed notarized PDF from DocOnChain"
+												: "Sealed notarized PDF "
 										}
 										disabled={!notarizedPdfReady || notarizedPdfOpening}
 										onClick={() => void handleViewNotarizedPdf()}
@@ -653,7 +653,7 @@ function DocumentInstrumentCard({
 										title={
 											notarizedStoredInDb
 												? "Download sealed copy from storage"
-												: "Download sealed PDF from DocOnChain"
+												: "Download sealed PDF "
 										}
 										disabled={!notarizedPdfReady || notarizedPdfOpening}
 										onClick={() => void handleDownloadNotarizedPdf()}
@@ -770,7 +770,7 @@ function DocumentInstrumentCard({
 					</DialogContent>
 				</Dialog>
 
-				{hasDoconchainProject ? (
+				{hasSigningProject ? (
 					<DocumentActions
 						meetingId={meetingId}
 						documentId={attachment.fileObjectId}

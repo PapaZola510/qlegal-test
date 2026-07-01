@@ -332,7 +332,7 @@ export const enpProfiles = createTable("enp_profiles", t => ({
 	suffix: t.text("suffix"),
 	phoneE164: t.text("phone_e164"),
 	rollNo: t.text("roll_no"),
-	/** Date admitted to the Roll of Attorneys (DocOnChain `roll_no_date`). */
+	/** Date admitted to the Roll of Attorneys (Roll of Attorneys date). */
 	rollDate: t.timestamp("roll_date"),
 	npnCommissionNo: t.text("npn_commission_no"),
 	commissionValidUntil: t.timestamp("commission_valid_until"),
@@ -824,7 +824,7 @@ export const livenessValidations = createTable(
 )
 
 // ============================================================================
-// QUICKSIGN + DOCONCHAIN (E6)
+// QUICKSIGN (E6)
 // ============================================================================
 
 export type SignatureField = {
@@ -865,7 +865,7 @@ export const quicksignProjects = createTable(
 		signatureFields: t
 			.jsonb("signature_fields")
 			.$type<SignatureField[] | null>(),
-		/** Sealed notarized PDF copied from DocOnChain vault into our object storage. */
+		/** Sealed notarized PDF copied from Registry into our object storage. */
 		notarizedFileObjectId: t
 			.text("notarized_file_object_id")
 			.references(() => fileObjects.id, { onDelete: "set null" }),
@@ -934,7 +934,7 @@ export const quicksignProjectDocumentTypes = createTable(
 	]
 )
 
-/** IEN checkbox acknowledgments captured before DocOnChain signing (ENP, principal, witness). */
+/** IEN checkbox acknowledgments captured before Signing (ENP, principal, witness). */
 export const ienNotarialAttestations = createTable(
 	"ien_notarial_attestations",
 	t => ({

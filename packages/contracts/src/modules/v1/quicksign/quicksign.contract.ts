@@ -40,18 +40,18 @@ export const quicksignContract = {
 		.input(QuicksignIdSchema)
 		.output(QuicksignProjectSchema),
 
-	/** Step 1 — create DB row and DOCONCHAIN project from an uploaded `qs_original` file (D2). */
+	/** Step 1 — create DB row from an uploaded `qs_original` file (D2). */
 	create: oc
 		.route({
 			method: "POST",
 			path: "/quicksign",
-			summary: "Create QuickSign project (upload + DOCONCHAIN project)",
+			summary: "Create QuickSign project (upload)",
 			tags: ["QuickSign"],
 		})
 		.input(CreateQuicksignProjectSchema)
 		.output(QuicksignProjectSchema),
 
-	/** Step 2 — register client signer; triggers DOCONCHAIN invite email when configured. */
+	/** Step 2 — register client signer and send invite email. */
 	addSigner: oc
 		.route({
 			method: "POST",
@@ -67,7 +67,7 @@ export const quicksignContract = {
 		.route({
 			method: "POST",
 			path: "/quicksign/{id}/plot-link",
-			summary: "Get DOCONCHAIN plotter short link",
+			summary: "Get plotter short link",
 			tags: ["QuickSign"],
 		})
 		.input(QuicksignIdSchema)
@@ -84,7 +84,7 @@ export const quicksignContract = {
 		.input(QuicksignIdSchema)
 		.output(QuicksignProjectSchema),
 
-	/** Step 3c — save signature field coordinates (replaces DocOnChain plotter). */
+	/** Step 3c — save signature field coordinates (replaces plotter). */
 	saveSignatureFields: oc
 		.route({
 			method: "PUT",
@@ -105,18 +105,6 @@ export const quicksignContract = {
 		})
 		.input(QuicksignIdSchema)
 		.output(SignatureFieldsResponseSchema),
-
-	/** Retry DOCONCHAIN project creation with the same uploaded file (no re-upload). */
-	retryDcProject: oc
-		.route({
-			method: "POST",
-			path: "/quicksign/{id}/retry-dc",
-			summary: "Retry DOCONCHAIN project creation",
-			tags: ["QuickSign"],
-		})
-		.input(QuicksignIdSchema)
-		.output(QuicksignProjectSchema),
-
 	recordIenAttestation: oc
 		.route({
 			method: "POST",

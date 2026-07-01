@@ -1,6 +1,6 @@
 import { getApiUrl } from "@/core/lib/utils"
 
-export interface VerifyDoconchainSigner {
+export interface VerifySigner {
 	name: string
 	email: string
 	role: string | null
@@ -8,14 +8,14 @@ export interface VerifyDoconchainSigner {
 	signedAt: string | null
 }
 
-export interface VerifyDoconchainDetails {
+export interface VerifyDetails {
 	documentName: string | null
 	verificationDate: string | null
 	projectName: string | null
 	projectReferenceNumber: string | null
 	projectUuid: string | null
-	doconchainStatus: string | null
-	signers: VerifyDoconchainSigner[]
+	status: string | null
+	signers: VerifySigner[]
 }
 
 export interface VerifyDocumentResponse {
@@ -34,10 +34,10 @@ export interface VerifyDocumentResponse {
 	doconchainVerificationUuid: string | null
 	certificateAccessKey: string | null
 	hasCertificateOfCompletion: boolean
-	doconchainDetails: VerifyDoconchainDetails | null
+	verificationDetails: VerifyDetails | null
 }
 
-/** Stream DocOnChain Certificate of Completion PDF (15-minute access key from verify response). */
+/** Stream Certificate of Completion PDF (15-minute access key from verify response). */
 export function getCertificateOfCompletionUrl(
 	accessKey: string,
 	opts?: { download?: boolean }

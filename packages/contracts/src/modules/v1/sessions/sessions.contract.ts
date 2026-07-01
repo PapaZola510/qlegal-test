@@ -30,6 +30,8 @@ import {
 	MarkSignedForCurrentUserResultSchema,
 	MeetingEnbSignatureRequestSchema,
 	MeetingEnbSigningStatusSchema,
+	ReSignNotarizedDocumentInputSchema,
+	ReSignNotarizedDocumentResultSchema,
 	MeetingIdSchema,
 	MeetingSignerParticipantSchema,
 	NotarialSessionSchema,
@@ -221,7 +223,7 @@ export const sessionsContract = {
 		.route({
 			method: "POST",
 			path: "/sessions/meetings/{meetingId}/documents/{documentId}/plot-link",
-			summary: "DocOnChain edit/draft plot link for ENP (place signature fields)",
+			summary: "edit/draft plot link for ENP (place signature fields)",
 			tags: ["Sessions"],
 		})
 		.input(GenerateDocoChainPlotLinkInputSchema)
@@ -241,7 +243,7 @@ export const sessionsContract = {
 		.route({
 			method: "POST",
 			path: "/sessions/meetings/{meetingId}/documents/{documentId}/initiate-signing",
-			summary: "Open DocOnChain plot or per-signer signing link",
+			summary: "Open plot or per-signer signing link",
 			tags: ["Sessions"],
 		})
 		.input(InitiateMeetingSigningInputSchema)
@@ -251,7 +253,7 @@ export const sessionsContract = {
 		.route({
 			method: "POST",
 			path: "/sessions/meetings/{meetingId}/documents/{documentId}/sign-link",
-			summary: "Per-signer signing link (signer-owned DocOnChain token fallback)",
+			summary: "Per-signer signing link (signer-owned token fallback)",
 			tags: ["Sessions"],
 		})
 		.input(GenerateDocoChainSignLinkInputSchema)
@@ -261,7 +263,7 @@ export const sessionsContract = {
 		.route({
 			method: "POST",
 			path: "/sessions/meetings/{meetingId}/documents/{documentId}/mark-signed",
-			summary: "Mark current user as signed after DocOnChain popup closes",
+			summary: "Mark current user as signed after popup closes",
 			tags: ["Sessions"],
 		})
 		.input(MarkSignedForCurrentUserInputSchema)
@@ -306,6 +308,16 @@ export const sessionsContract = {
 		})
 		.input(SignMeetingEnbEntryInputSchema)
 		.output(SignMeetingEnbEntryResultSchema),
+
+	reSignNotarizedDocument: oc
+		.route({
+			method: "POST",
+			path: "/sessions/meetings/{meetingId}/documents/{documentId}/resign",
+			summary: "Reset notarized document to pending_signatures for re-sealing (dev only)",
+			tags: ["Sessions"],
+		})
+		.input(ReSignNotarizedDocumentInputSchema)
+		.output(ReSignNotarizedDocumentResultSchema),
 
 	locationVerification: locationVerificationContract,
 }

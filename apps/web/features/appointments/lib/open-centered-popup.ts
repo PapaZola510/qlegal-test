@@ -1,4 +1,4 @@
-/** Centered popup (~88% viewport) for DocOnChain signing/plotting. */
+/** Centered popup (~88% viewport) for signing/plotting. */
 export function openCenteredPopup(url: string, windowName: string): Window | null {
 	const w = Math.min(1280, Math.floor(window.screen.width * 0.88))
 	const h = Math.min(900, Math.floor(window.screen.height * 0.9))

@@ -30,7 +30,6 @@ const footerGroups = [
 				href: "https://sc.judiciary.gov.ph/enotary-services/enotarization-rules/",
 			},
 			{ title: "DICT National PKI", href: "https://dict.gov.ph/pnpki" },
-			{ title: "DOCONCHAIN", href: "https://doconchain.com" },
 		],
 	},
 ]

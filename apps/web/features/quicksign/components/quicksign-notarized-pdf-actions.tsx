@@ -19,7 +19,7 @@ interface QuicksignNotarizedPdfActionsProps {
 	documentFileId: string
 	documentTitle: string
 	registrySynced: boolean
-	/** When false, signatures are still syncing in our DB / DocOnChain. */
+	/** When false, signatures are still syncing in our DB / . */
 	canAccessNotarized: boolean
 }
 
@@ -66,14 +66,14 @@ export function QuicksignNotarizedPdfActions({
 		<div className="space-y-2">
 			<p className="text-xs font-medium text-green-600 dark:text-green-500">
 				{!canAccessNotarized
-					? "Syncing signature status from DocOnChain…"
+					? "Syncing signature status …"
 					: "All signatures complete — use View or Download for the notarized PDF"}
 			</p>
 			<div className="flex flex-wrap gap-2">
 				<Button
 					type="button"
 					size="sm"
-					title="Sealed notarized PDF from DocOnChain"
+					title="Sealed notarized PDF "
 					disabled={opening || !canAccessNotarized}
 					onClick={() => void handleViewNotarizedPdf()}
 				>
@@ -83,7 +83,7 @@ export function QuicksignNotarizedPdfActions({
 					type="button"
 					variant="outline"
 					size="sm"
-					title="Sealed notarized PDF from DocOnChain"
+					title="Sealed notarized PDF "
 					disabled={opening || !canAccessNotarized}
 					onClick={() => void handleDownloadNotarizedPdf()}
 				>

@@ -32,10 +32,10 @@ const complianceItems = [
 	},
 	{
 		icon: Shield01Icon,
-		title: "DOCONCHAIN & Hyperledger",
+		title: "Hyperledger Fabric Audit Trail",
 		description:
-			"Combines document signing with blockchain-backed audit trails and compliance records.",
-		link: "https://doconchain.com",
+			"Blockchain-backed audit trails and compliance records for every notarized document.",
+		link: "https://www.hyperledger.org/use/fabric",
 	},
 ]
 

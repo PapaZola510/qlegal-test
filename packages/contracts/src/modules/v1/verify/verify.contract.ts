@@ -7,7 +7,7 @@ export const verifyContract = {
 		.route({
 			method: "POST",
 			path: "/verify/document",
-			summary: "Verify a notarized document by DocOnChain vault code",
+			summary: "Verify a notarized document by Registry code",
 			tags: ["Verify"],
 			spec: spec => ({ ...spec, security: [] }),
 		})

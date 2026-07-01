@@ -1,9 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common"
 import { PDFDocument } from "pdf-lib"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 
 import { db } from "@/common/database/database.client"
-import { quicksignProjects } from "@repo/db/schema"
+import { quicksignProjects, quicksignSigners } from "@repo/db/schema"
 import { LocalStorageService } from "@/services/storage/local-storage.service"
 
 @Injectable()
@@ -57,6 +57,17 @@ export class LocalSigningService {
 
 		const updated = Buffer.from(await doc.save())
 		await this.localStorageService.savePdf(projectUuid, updated)
+
+		// Mark signer as signed locally
+		await db
+			.update(quicksignSigners)
+			.set({ signedAt: new Date(), updatedAt: new Date() })
+			.where(
+				and(
+					eq(quicksignSigners.projectId, projectUuid),
+					eq(quicksignSigners.email, signerEmail)
+				)
+			)
 
 		this.log.debug(`Signature stamped for ${signerEmail} on project …${projectUuid.slice(-12)}`)
 	}

@@ -313,230 +313,230 @@ export function buildNotarialRegisterHtml(
 <meta charset="UTF-8" />
 <title>Electronic Notarial Register</title>
 <style>
-  @page { size: landscape; margin: 8mm; }
-  * { box-sizing: border-box; }
-  body {
-    font-family: "Times New Roman", Times, serif;
-    font-size: 7pt;
-    color: #000;
-    margin: 0;
-    padding: 0;
-  }
-  .sheet { width: 100%; }
-  .header-grid {
-    display: grid;
-    grid-template-columns: 1fr 2.2fr 1fr;
-    gap: 6px;
-    align-items: start;
-    margin-bottom: 6px;
-  }
-  .box {
-    border: 1px solid #000;
-    padding: 4px 6px;
-    min-height: 52px;
-    font-size: 7pt;
-    line-height: 1.35;
-  }
-  .box.dashed { border-style: dashed; }
-  .title-block {
-    text-align: center;
-    padding: 2px 4px;
-  }
-  .title-seals {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .title-seals .seal-img {
-    width: 44px;
-    height: 44px;
-    object-fit: contain;
-    flex-shrink: 0;
-  }
-  .title-seals .title-text { flex: 1; min-width: 0; }
-  .enf-logo-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    padding: 4px;
-  }
-  .enf-logo-wrap img {
-    max-width: 100%;
-    max-height: 40px;
-    object-fit: contain;
-  }
-  .title-block h1 {
-    font-size: 11pt;
-    margin: 2px 0 0;
-    letter-spacing: 0.02em;
-  }
-  .title-block h2 {
-    font-size: 13pt;
-    margin: 4px 0 2px;
-    font-weight: 700;
-  }
-  .title-block p { margin: 0; font-size: 7.5pt; }
-  .cert {
-    border: 1px solid #000;
-    padding: 5px 8px;
-    margin-bottom: 6px;
-    font-size: 7pt;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    align-items: end;
-  }
-  .cert p { margin: 0 0 4px; }
-  .sig-box {
-    border: 1px solid #000;
-    min-width: 120px;
-    min-height: 36px;
-    text-align: center;
-    font-size: 6.5pt;
-    padding: 4px;
-  }
-  table.register {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-    font-size: 5.8pt;
-  }
-  table.register th,
-  table.register td {
-    border: 1px solid #000;
-    padding: 2px 3px;
-    vertical-align: top;
-    word-wrap: break-word;
-    overflow-wrap: anywhere;
-  }
-  table.register th {
-    font-weight: 700;
-    text-align: center;
-    font-size: 5.5pt;
-    line-height: 1.15;
-    background: #f5f5f5;
-  }
-  .auto { color: #0d6b0d; }
-  .manual { color: #0a0a8a; }
-  .footer {
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-end;
-    gap: 16px;
-    margin-top: 6px;
-    font-size: 6.5pt;
-  }
-  .legend { text-align: right; line-height: 1.4; }
-  .legend .auto { font-weight: 600; }
-  .legend .manual { font-weight: 600; }
-  .page-boxes {
-    display: flex;
-    gap: 6px;
-  }
-  .page-box {
-    border: 1px solid #000;
-    padding: 2px 8px;
-    text-align: center;
-    min-width: 48px;
-  }
-  .page-box strong { display: block; font-size: 5.5pt; }
-  .watermark {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.12;
-    font-size: 72pt;
-    font-weight: 700;
-    color: #888;
-    transform: rotate(-35deg);
-  }
-  .content { position: relative; z-index: 1; }
-  @media print {
-    .watermark { opacity: 0.1; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
+ @page { size: landscape; margin: 8mm; }
+ * { box-sizing: border-box; }
+ body {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 7pt;
+  color: #000;
+  margin: 0;
+  padding: 0;
+ }
+ .sheet { width: 100%; }
+ .header-grid {
+  display: grid;
+  grid-template-columns: 1fr 2.2fr 1fr;
+  gap: 6px;
+  align-items: start;
+  margin-bottom: 6px;
+ }
+ .box {
+  border: 1px solid #000;
+  padding: 4px 6px;
+  min-height: 52px;
+  font-size: 7pt;
+  line-height: 1.35;
+ }
+ .box.dashed { border-style: dashed; }
+ .title-block {
+  text-align: center;
+  padding: 2px 4px;
+ }
+ .title-seals {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+ }
+ .title-seals .seal-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+ }
+ .title-seals .title-text { flex: 1; min-width: 0; }
+ .enf-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 4px;
+ }
+ .enf-logo-wrap img {
+  max-width: 100%;
+  max-height: 40px;
+  object-fit: contain;
+ }
+ .title-block h1 {
+  font-size: 11pt;
+  margin: 2px 0 0;
+  letter-spacing: 0.02em;
+ }
+ .title-block h2 {
+  font-size: 13pt;
+  margin: 4px 0 2px;
+  font-weight: 700;
+ }
+ .title-block p { margin: 0; font-size: 7.5pt; }
+ .cert {
+  border: 1px solid #000;
+  padding: 5px 8px;
+  margin-bottom: 6px;
+  font-size: 7pt;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+ }
+ .cert p { margin: 0 0 4px; }
+ .sig-box {
+  border: 1px solid #000;
+  min-width: 120px;
+  min-height: 36px;
+  text-align: center;
+  font-size: 6.5pt;
+  padding: 4px;
+ }
+ table.register {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 5.8pt;
+ }
+ table.register th,
+ table.register td {
+  border: 1px solid #000;
+  padding: 2px 3px;
+  vertical-align: top;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+ }
+ table.register th {
+  font-weight: 700;
+  text-align: center;
+  font-size: 5.5pt;
+  line-height: 1.15;
+  background: #f5f5f5;
+ }
+ .auto { color: #0d6b0d; }
+ .manual { color: #0a0a8a; }
+ .footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 16px;
+  margin-top: 6px;
+  font-size: 6.5pt;
+ }
+ .legend { text-align: right; line-height: 1.4; }
+ .legend .auto { font-weight: 600; }
+ .legend .manual { font-weight: 600; }
+ .page-boxes {
+  display: flex;
+  gap: 6px;
+ }
+ .page-box {
+  border: 1px solid #000;
+  padding: 2px 8px;
+  text-align: center;
+  min-width: 48px;
+ }
+ .page-box strong { display: block; font-size: 5.5pt; }
+ .watermark {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.12;
+  font-size: 72pt;
+  font-weight: 700;
+  color: #888;
+  transform: rotate(-35deg);
+ }
+ .content { position: relative; z-index: 1; }
+ @media print {
+  .watermark { opacity: 0.1; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+ }
 </style>
 </head>
 <body>
 <div class="watermark">DRAFT</div>
 <div class="content sheet">
-  <div class="header-grid">
-    <div class="box">
-      <div><strong>ENP Name:</strong> ${escapeHtml(enpName)}</div>
-      <div><strong>Roll Number:</strong> ${escapeHtml(roll)}</div>
-      <div><strong>ENP NPN:</strong> ${escapeHtml(commission)}</div>
-      <div><strong>Commissioning Validity:</strong> Start: — &nbsp; End: ${escapeHtml(commissionEnd)}</div>
-    </div>
-    <div class="title-block">
-      <div class="title-seals">
-        <img class="seal-img" src="${escapeHtml(scSealUrl)}" alt="Supreme Court of the Philippines" />
-        <div class="title-text">
-          <p>Supreme Court of the Philippines</p>
-          <p>Electronic Notary Services</p>
-          <h2>NOTARIAL REGISTER</h2>
-        </div>
-        <img class="seal-img" src="${escapeHtml(scSealUrl)}" alt="Electronic Notary Services" />
-      </div>
-    </div>
-    <div>
-      <div class="box dashed" style="margin-bottom:4px;">
-        <div class="enf-logo-wrap">
-          <img src="${escapeHtml(enfLogoUrl)}" alt="${escapeHtml(ENF_NAME)}" />
-        </div>
-      </div>
-      <div class="box" style="text-align:center;"><strong>ENF Accreditation No.</strong><br />${escapeHtml(enfAccreditation)}</div>
-    </div>
+ <div class="header-grid">
+  <div class="box">
+   <div><strong>ENP Name:</strong> ${escapeHtml(enpName)}</div>
+   <div><strong>Roll Number:</strong> ${escapeHtml(roll)}</div>
+   <div><strong>ENP NPN:</strong> ${escapeHtml(commission)}</div>
+   <div><strong>Commissioning Validity:</strong> Start: — &nbsp; End: ${escapeHtml(commissionEnd)}</div>
   </div>
-
-  <div class="cert">
-    <div>
-      <p>I certify that the instruments listed below were sworn to or acknowledged before me pursuant to the Rules on Electronic Notarization. I further certify to the accuracy and chronology of the entries in this Electronic Notarial Book, using the facility <strong>${escapeHtml(FACILITY_NAME)}</strong>.</p>
+  <div class="title-block">
+   <div class="title-seals">
+    <img class="seal-img" src="${escapeHtml(scSealUrl)}" alt="Supreme Court of the Philippines" />
+    <div class="title-text">
+     <p>Supreme Court of the Philippines</p>
+     <p>Electronic Notary Services</p>
+     <h2>NOTARIAL REGISTER</h2>
     </div>
-    <div class="sig-box"><strong>ENP Digital Signature</strong></div>
+    <img class="seal-img" src="${escapeHtml(scSealUrl)}" alt="Electronic Notary Services" />
+   </div>
   </div>
-
-  <table class="register">
-    <thead>
-      <tr>
-        <th>ENTRY NO.<br /><span style="font-weight:400;font-size:5pt;">Document No.-Page No.-Month No.-Year</span></th>
-        <th>ELECTRONIC NOTARIAL ACT EXECUTED</th>
-        <th>DATE AND TIME OF ELECTRONIC NOTARIAL ACT</th>
-        <th>TITLE OR DESCRIPTION OF NOTARIZED ELECTRONIC DOCUMENT</th>
-        <th>NAME AND ADDRESS OF EACH PRINCIPAL</th>
-        <th>NAME AND ADDRESS OF EACH WITNESS (IF ANY)</th>
-        <th>COMPETENT EVIDENCE OF IDENTITY (PRINCIPALS AND WITNESSES)</th>
-        <th>FEE CHARGED<br /><span style="font-weight:400;font-size:5pt;">Quoted at booking; payment collected before completion</span></th>
-        <th>STATEMENT: PARTIES WITHIN THE PHILIPPINES OR LIMITED EXTRATERRITORIAL VENUE</th>
-        <th>MODE OF NOTARIZATION (IEN/REN) AND OTHER SIGNIFICANT CIRCUMSTANCES</th>
-        <th>REASONS AND CIRCUMSTANCES FOR NOT COMPLETING THE ACT</th>
-        <th>INSPECT / COPY / CTC REQUESTS (REQUESTER, IDENTITY, PURPOSE, OUTCOME)</th>
-      </tr>
-    </thead>
-    <tbody>${bodyRows}</tbody>
-  </table>
-
-  <div class="footer">
-    <div class="legend">
-      <div><span class="auto">Green</span> — auto-filled data</div>
-      <div><span class="manual">Blue</span> — for input</div>
+  <div>
+   <div class="box dashed" style="margin-bottom:4px;">
+    <div class="enf-logo-wrap">
+     <img src="${escapeHtml(enfLogoUrl)}" alt="${escapeHtml(ENF_NAME)}" />
     </div>
-    <div class="page-boxes">
-      <div class="page-box"><strong>PAGE NO.</strong>${escapeHtml(pageNo)}</div>
-      <div class="page-box"><strong>MONTH NO.</strong>${escapeHtml(monthNo)}</div>
-      <div class="page-box"><strong>YEAR NO.</strong>${escapeHtml(yearNo)}</div>
-    </div>
+   </div>
+   <div class="box" style="text-align:center;"><strong>ENF Accreditation No.</strong><br />${escapeHtml(enfAccreditation)}</div>
   </div>
+ </div>
+
+ <div class="cert">
+  <div>
+   <p>I certify that the instruments listed below were sworn to or acknowledged before me pursuant to the Rules on Electronic Notarization. I further certify to the accuracy and chronology of the entries in this Electronic Notarial Book, using the facility <strong>${escapeHtml(FACILITY_NAME)}</strong>.</p>
+  </div>
+  <div class="sig-box"><strong>ENP Digital Signature</strong></div>
+ </div>
+
+ <table class="register">
+  <thead>
+   <tr>
+    <th>ENTRY NO.<br /><span style="font-weight:400;font-size:5pt;">Document No.-Page No.-Month No.-Year</span></th>
+    <th>ELECTRONIC NOTARIAL ACT EXECUTED</th>
+    <th>DATE AND TIME OF ELECTRONIC NOTARIAL ACT</th>
+    <th>TITLE OR DESCRIPTION OF NOTARIZED ELECTRONIC DOCUMENT</th>
+    <th>NAME AND ADDRESS OF EACH PRINCIPAL</th>
+    <th>NAME AND ADDRESS OF EACH WITNESS (IF ANY)</th>
+    <th>COMPETENT EVIDENCE OF IDENTITY (PRINCIPALS AND WITNESSES)</th>
+    <th>FEE CHARGED<br /><span style="font-weight:400;font-size:5pt;">Quoted at booking; payment collected before completion</span></th>
+    <th>STATEMENT: PARTIES WITHIN THE PHILIPPINES OR LIMITED EXTRATERRITORIAL VENUE</th>
+    <th>MODE OF NOTARIZATION (IEN/REN) AND OTHER SIGNIFICANT CIRCUMSTANCES</th>
+    <th>REASONS AND CIRCUMSTANCES FOR NOT COMPLETING THE ACT</th>
+    <th>INSPECT / COPY / CTC REQUESTS (REQUESTER, IDENTITY, PURPOSE, OUTCOME)</th>
+   </tr>
+  </thead>
+  <tbody>${bodyRows}</tbody>
+ </table>
+
+ <div class="footer">
+  <div class="legend">
+   <div><span class="auto">Green</span> — auto-filled data</div>
+   <div><span class="manual">Blue</span> — for input</div>
+  </div>
+  <div class="page-boxes">
+   <div class="page-box"><strong>PAGE NO.</strong>${escapeHtml(pageNo)}</div>
+   <div class="page-box"><strong>MONTH NO.</strong>${escapeHtml(monthNo)}</div>
+   <div class="page-box"><strong>YEAR NO.</strong>${escapeHtml(yearNo)}</div>
+  </div>
+ </div>
 </div>
 <script>
-  window.addEventListener("load", function () {
-    window.setTimeout(function () { window.print(); }, 300);
-  });
+ window.addEventListener("load", function () {
+  window.setTimeout(function () { window.print(); }, 300);
+ });
 </script>
 </body>
 </html>`

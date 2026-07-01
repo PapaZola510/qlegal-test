@@ -21,7 +21,7 @@ export function DocumentVerifierCard() {
 					<CardTitle className="text-base">Document verifier</CardTitle>
 				</div>
 				<CardDescription className="pl-[42px] leading-relaxed">
-					Confirm a notarized PDF is authentic using DocOnChain DOC Verify.
+					Confirm a notarized PDF is authentic.
 				</CardDescription>
 			</CardHeader>
 			<CardContent>

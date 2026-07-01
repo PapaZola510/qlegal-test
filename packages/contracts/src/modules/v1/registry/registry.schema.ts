@@ -41,10 +41,10 @@ export const RegistryActSchema = z.object({
 	documentUrl: z.string().nullable(),
 	/** Set for acts synced when a meeting ends (`description` includes `qlegal-file:{id}`). */
 	documentFileObjectId: z.string().nullable(),
-	/** DocOnChain project UUID (`description` includes `qlegal-dc:{uuid}`). */
+	/** QuickSign project UUID (`description` includes `qlegal-dc:{uuid}`). */
 	doconchainProjectUuid: z.string().nullable(),
-	/** DOC Verify code from DocOnChain vault (`description` may include `qlegal-dc-code:{code}`). */
-	doconchainDocumentCode: z.string().nullable(),
+	/** Registry document code (`description` may include `qlegal-dc-code:{code}`). */
+	documentCode: z.string().nullable(),
 	scStatus: ScStatusEnum,
 	scSubmittedAt: z.string().nullable(),
 	scSyncedAt: z.string().nullable(),
@@ -62,7 +62,7 @@ export const RegistryActSchema = z.object({
 	notarizationLocation: z.string().nullable(),
 	/** Principal e-signatures captured during the live session (Rule §4). */
 	principalEnbSignatures: z.array(RegistryEnbSignatureSchema).default([]),
-	/** IEN checkbox acknowledgments captured before DocOnChain signing. */
+	/** IEN checkbox acknowledgments captured before Signing. */
 	ienNotarialAttestations: z.array(RegistryIenAttestationSchema).default([]),
 	/** ENB inspect/copy and certified true copy requests linked to this entry. */
 	enbAccessRequests: z.array(EnbAccessRequestSchema).default([]),

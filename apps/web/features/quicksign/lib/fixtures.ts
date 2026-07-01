@@ -89,7 +89,7 @@ export interface QuickSignState {
 	meeting: MeetingPayload
 	clientJoinLink: string
 	enpJoinLink: string
-	/** Principal/client DocOnChain URL (invite email). */
+	/** Principal/client URL (invite email). */
 	signDocumentUrl: string
 	enpSignDocumentUrl: string
 	principalSignerStatus: {

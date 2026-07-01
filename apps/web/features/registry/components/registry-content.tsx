@@ -243,7 +243,7 @@ export function RegistryContent() {
 
 	const tableEmptyMessage =
 		acts.length === 0
-			? "No registry entries yet. Acts are added when you end a meeting, after DocOnChain marks each document as completed."
+			? "No registry entries yet. Acts are added when you end a meeting, after marks each document as completed."
 			: "No registry acts match your search or filters."
 
 	return (

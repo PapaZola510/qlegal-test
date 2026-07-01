@@ -144,61 +144,18 @@ export const env = createEnv({
 		 */
 		SESSION_DEV_RELAX_CLIENT_HYPERVERGE: z.enum(["true", "false"]).optional(),
 
-		/** DOCONCHAIN (E6). Optional: QuickSign uses mock DC UUIDs and skips HTTP when unset. */
-		DOCONCHAIN_API_URL: z.string().url().optional(),
-		DOCONCHAIN_APP_URL: z.string().url().optional(),
-		DOCONCHAIN_CLIENT_KEY: z.string().optional(),
-		DOCONCHAIN_CLIENT_SECRET: z.string().optional(),
-		/** Fallback org email when ENP email is not registered in DC (matches legacy). */
-		DOCONCHAIN_ORG_EMAIL: z.string().email().optional(),
-		/** Legacy alias for DOCONCHAIN_ORG_EMAIL (many .env files use this name). */
-		DOCONCHAIN_EMAIL: z.string().email().optional(),
-		/** Organization ID used for automatic member join after registration. */
-		DOCONCHAIN_ORGANIZATION_ID: z.string().optional(),
-		/** Role to assign when auto-joining users into the Doconchain organization. */
-		DOCONCHAIN_ORGANIZATION_MEMBER_ROLE: z.string().optional(),
-		/** Static bearer override (staging / local). */
-		DOCONCHAIN_API_TOKEN: z.string().optional(),
-		/**
-		 * Debug-only: when `true`, logs DocOnChain Bearer tokens + created project UUIDs to the backend terminal so you can
-		 * copy/paste into the DocOnChain portal. NEVER enable in shared environments.
-		 */
-		DOCONCHAIN_LOG_SENSITIVE: z.enum(["true", "false"]).optional(),
-		/** When `true`, logs verbose DocOnChain vault scan / retry diagnostics (default: quiet). */
-		DOCONCHAIN_VERBOSE_LOGS: z.enum(["true", "false"]).optional(),
-		/**
-		 * When `true`, DocOnChain adapter `getAccessToken` ignores `DOCONCHAIN_API_TOKEN` and always uses
-		 * `POST …/api/v2/generate/token` with **main org** `DOCONCHAIN_CLIENT_KEY` / `DOCONCHAIN_CLIENT_SECRET` + email
-		 * (ENP / org fallback). Use when a static token is present in `.env` but vault/detail returns 401 for the wrong DC user.
-		 */
-		DOCONCHAIN_FORCE_GENERATED_TOKEN: z.enum(["true", "false"]).optional(),
-		/**
-		 * When `true` and NODE_ENV is `development`, use mock DC tokens/project UUIDs if
-		 * `/api/v2/generate/token` fails (e.g. DocOnChain staging Redis MISCONF). Plot/sign still need a healthy DC.
-		 */
-		DOCONCHAIN_DEV_MOCK_ON_FAILURE: z.enum(["true", "false"]).optional(),
-		/**
-		 * Optional override for DOC Verify `user_uuid`. Normally resolved automatically via
-		 * `GET /api/v2/my/profile` (`data.uuid`) using the same Bearer token as verification.
-		 * Not the same as DOCONCHAIN_ORGANIZATION_UUID.
-		 */
-		DOCONCHAIN_VERIFY_USER_UUID: z.preprocess(
-			val => (typeof val === "string" && val.trim() === "" ? undefined : val),
-			z.string().min(6).optional()
-		),
-
 		/** Supreme Court eNotarization API (E7). Optional: sync returns stub NRID when unset. */
 		SUPREME_COURT_API_URL: z.string().url().optional(),
 		SUPREME_COURT_AUTH_URL: z.string().url().optional(),
 		SUPREME_COURT_CLIENT_ID: z.string().optional(),
 		SUPREME_COURT_USERNAME: z.string().optional(),
 		SUPREME_COURT_PASSWORD: z.string().optional(),
-		/** Notary Facility Number (NFN-…) assigned by SC. */
+		/** Notary Facility Number (NFN-...) assigned by SC. */
 		SUPREME_COURT_NFN: z.string().optional(),
 
 		/** Python Contract AI (E9). When unset, Contract AI uses in-process fixtures (C1-style mocks). */
 		AI_SERVICE_BASE_URL: z.string().url().optional(),
-		/** Shared secret: Nest → Python `X-Internal-Token`, and Python → Nest resolve callback. */
+		/** Shared secret: Nest -> Python `X-Internal-Token`, and Python -> Nest resolve callback. */
 		CONTRACT_AI_INTERNAL_TOKEN: z.string().optional(),
 		/**
 		 * Base URL the AI container uses to reach this API for `resolve-download` (e.g. http://host.docker.internal:3000).
@@ -208,7 +165,7 @@ export const env = createEnv({
 		/** TTL for presigned GET URLs returned to the AI service (seconds). */
 		CONTRACT_AI_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(900).default(120),
 
-		/** G1: Contract AI — max calls per user per window (in-process). */
+		/** G1: Contract AI -- max calls per user per window (in-process). */
 		CONTRACT_AI_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(10_000).default(60),
 		CONTRACT_AI_RATE_LIMIT_WINDOW_MS: z.coerce
 			.number()
@@ -217,10 +174,10 @@ export const env = createEnv({
 			.max(24 * 60 * 60_000)
 			.default(60 * 60_000),
 
-		/** G1: POST /verify/document — max requests per client IP per minute. */
+		/** G1: POST /verify/document -- max requests per client IP per minute. */
 		VERIFY_DOCUMENT_RATE_LIMIT_PER_IP: z.coerce.number().int().min(1).max(1000).default(20),
 
-		/** G1: Registry bulk SC sync — max requests per ENP per window. */
+		/** G1: Registry bulk SC sync -- max requests per ENP per window. */
 		REGISTRY_SC_SYNC_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(10_000).default(60),
 		REGISTRY_SC_SYNC_RATE_LIMIT_WINDOW_MS: z.coerce
 			.number()
@@ -237,7 +194,7 @@ export const env = createEnv({
 				message: "COMPLIANCE_EXPORT_SIGNING_KEY is required in production",
 			}),
 
-		/** G1: Multipart file uploads — max per authenticated user per window. */
+		/** G1: Multipart file uploads -- max per authenticated user per window. */
 		FILE_UPLOAD_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(10_000).default(60),
 		FILE_UPLOAD_RATE_LIMIT_WINDOW_MS: z.coerce
 			.number()
@@ -311,7 +268,6 @@ export const env = createEnv({
 	skipValidation: !!process.env.CI || process.env.npm_lifecycle_event === "lint",
 })
 
-/** Prefer DOCONCHAIN_ORG_EMAIL; fall back to legacy DOCONCHAIN_EMAIL for token generation and auto-join. */
 export function publicAppUrl(): string {
 	const explicit = env.PUBLIC_APP_URL?.trim()
 	if (explicit) return explicit.replace(/\/$/, "")
@@ -328,18 +284,6 @@ export function termsUrl(): string {
 /** Privacy Policy URL for email footers; falls back to `{PUBLIC_APP_URL}/privacy`. */
 export function privacyPolicyUrl(): string {
 	return env.NEXT_PUBLIC_PRIVACY_URL?.trim() || `${publicAppUrl()}/privacy`
-}
-
-export function doconchainOrgEmailFallback(): string | undefined {
-	const org = env.DOCONCHAIN_ORG_EMAIL?.trim()
-	if (org) return org
-	const legacy = env.DOCONCHAIN_EMAIL?.trim()
-	return legacy || undefined
-}
-
-/** Local-only escape hatch when DocOnChain token mint is down but you still want QuickSign UI flows. */
-export function doconchainDevMockOnFailure(): boolean {
-	return env.NODE_ENV === "development" && env.DOCONCHAIN_DEV_MOCK_ON_FAILURE === "true"
 }
 
 export type Env = typeof env

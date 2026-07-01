@@ -237,6 +237,9 @@ importers:
       pg:
         specifier: 'catalog:'
         version: 8.16.3
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -292,6 +295,9 @@ importers:
       '@types/pg':
         specifier: 'catalog:'
         version: 8.16.0
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       '@types/supertest':
         specifier: ^6.0.3
         version: 6.0.3

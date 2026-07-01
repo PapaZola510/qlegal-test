@@ -21,8 +21,7 @@ import { MotionEffect } from "@/features/home/ui/motion-effect"
 const proofPoints = [
 	"DICT National PKI Verified",
 	"PropTech Consortium Endorsed",
-	"Secured by DOCONCHAIN",
-	"Hyperledger Fabric Audit",
+	"Hyperledger Fabric Audit Trail",
 ]
 
 const orbitItems = [

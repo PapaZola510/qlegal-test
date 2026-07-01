@@ -134,7 +134,7 @@ export const registryContract = {
 		.route({
 			method: "POST",
 			path: "/registry/{id}/refresh-notarized-document",
-			summary: "Resolve notarized PDF from DocOnChain for a registry act",
+			summary: "Resolve notarized PDF from for a registry act",
 			tags: ["Registry"],
 		})
 		.input(RegistryActIdSchema)

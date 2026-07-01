@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { and, eq, inArray } from "drizzle-orm"
 
@@ -6,11 +7,12 @@ import {
 	meetingSignatureRequests,
 	quicksignProjects,
 	quicksignSigners,
+	registryActs,
 	users,
 } from "@repo/db/schema"
 
-import { DoconchainAdapterService } from "@/services/doconchain/doconchain-adapter.service"
-import { isDoconchainProjectCompleted } from "@/services/doconchain/doconchain-project-details"
+import { FilesService } from "@/modules/v1/files/files.service"
+import { LocalStorageService } from "@/services/storage/local-storage.service"
 import { NotarizedPdfArchiveService } from "@/services/notarized-pdf/notarized-pdf-archive.service"
 import { db } from "@/common/database/database.client"
 
@@ -44,7 +46,8 @@ export class NotarizedPdfDeliveryService {
 
 	constructor(
 		@Inject(EMAIL_ADAPTER) private readonly email: EmailAdapter,
-		private readonly dc: DoconchainAdapterService,
+		private readonly files: FilesService,
+		private readonly localStorage: LocalStorageService,
 		private readonly notarizedArchive: NotarizedPdfArchiveService
 	) {}
 
@@ -67,7 +70,7 @@ export class NotarizedPdfDeliveryService {
 
 				const outcome = await this.tryDeliverOnce(projectId, {
 					tryVault: attempt >= 3,
-					checkDoconchainStatus: attempt === 0 || attempt % 4 === 0,
+					checkSigningStatus: attempt === 0 || attempt % 4 === 0,
 				})
 				if (outcome === "done") return
 				if (outcome === "abort") return
@@ -82,7 +85,7 @@ export class NotarizedPdfDeliveryService {
 
 	private async tryDeliverOnce(
 		projectId: string,
-		opts: { tryVault: boolean; checkDoconchainStatus: boolean }
+		opts: { tryVault: boolean; checkSigningStatus: boolean }
 	): Promise<"done" | "retry" | "abort"> {
 		const [row] = await db
 			.select({
@@ -93,6 +96,7 @@ export class NotarizedPdfDeliveryService {
 				doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
 				appointmentId: quicksignProjects.appointmentId,
 				documentFileObjectId: quicksignProjects.documentFileObjectId,
+				notarizedFileObjectId: quicksignProjects.notarizedFileObjectId,
 				notarizedPdfEmailedAt: quicksignProjects.notarizedPdfEmailedAt,
 			})
 			.from(quicksignProjects)
@@ -110,7 +114,7 @@ export class NotarizedPdfDeliveryService {
 			row,
 			enp.email,
 			projectUuid,
-			opts.checkDoconchainStatus
+			opts.checkSigningStatus
 		)
 		if (!signingComplete) return "retry"
 
@@ -122,16 +126,51 @@ export class NotarizedPdfDeliveryService {
 			return "abort"
 		}
 
-		const token = await this.dc.getAccessToken(enp.email, { allowOrgFallback: false })
-		const pdfBytes = await this.dc.fetchNotarizedPdfBytes({
-			token,
-			projectUuid,
-			tryVault: opts.tryVault,
-			forceVaultScan: opts.tryVault,
-		})
+		let pdfBytes: Buffer | null = null
+		if (row.notarizedFileObjectId) {
+			try {
+				pdfBytes = await this.files.readStoredFileBuffer(row.notarizedFileObjectId)
+			} catch (e) {
+				this.log.warn(
+					`Failed to read notarized PDF from S3 for email: ${(e instanceof Error ? e.message : String(e)).slice(0, 160)}`
+				)
+			}
+		}
+		if (!pdfBytes) {
+			pdfBytes = await this.localStorage.readPdf(projectId).catch(() => null)
+		}
 		if (!pdfBytes) return "retry"
 
 		const pdf = await this.notarizedArchive.stampPdfForProject(pdfBytes, projectUuid)
+
+		const hash = createHash("sha256").update(pdf).digest("hex")
+		const [qsRow] = await db
+			.select({ description: quicksignProjects.description })
+			.from(quicksignProjects)
+			.where(eq(quicksignProjects.id, projectId))
+			.limit(1)
+		const oldDesc = qsRow?.description ?? ""
+		if (oldDesc.includes("qlegal-hash:")) {
+			const newDesc = oldDesc.replace(/(qlegal-hash:)[^\|]*/, `$1${hash}`)
+			await db
+				.update(quicksignProjects)
+				.set({ description: newDesc, updatedAt: new Date() })
+				.where(eq(quicksignProjects.id, projectId))
+			if (row.appointmentId) {
+				const [actRow] = await db
+					.select({ id: registryActs.id, description: registryActs.description })
+					.from(registryActs)
+					.where(eq(registryActs.appointmentId, row.appointmentId))
+					.limit(1)
+				if (actRow?.description?.includes("qlegal-hash:")) {
+					const newActDesc = actRow.description.replace(/(qlegal-hash:)[^\|]*/, `$1${hash}`)
+					await db
+						.update(registryActs)
+						.set({ description: newActDesc, updatedAt: new Date() })
+						.where(eq(registryActs.id, actRow.id))
+				}
+			}
+		}
 
 		await this.notarizedArchive.archiveQuicksignProjectPdf(projectId, pdf).catch(e => {
 			const msg = e instanceof Error ? e.message : String(e)
@@ -177,9 +216,9 @@ export class NotarizedPdfDeliveryService {
 			appointmentId: string | null
 			documentFileObjectId: string
 		},
-		enpEmail: string,
-		projectUuid: string,
-		checkDoconchainStatus: boolean
+		_enpEmail: string,
+		_projectUuid: string,
+		_checkSigningStatus: boolean
 	): Promise<boolean> {
 		if (row.status === "completed") return true
 
@@ -202,15 +241,7 @@ export class NotarizedPdfDeliveryService {
 			.where(eq(quicksignSigners.projectId, row.id))
 		if (qsSigners.length > 0 && qsSigners.every(s => s.signedAt !== null)) return true
 
-		if (!checkDoconchainStatus) return false
-
-		try {
-			const token = await this.dc.getAccessToken(enpEmail, { allowOrgFallback: false })
-			const details = await this.dc.getProjectDetails({ token, projectUuid })
-			return Boolean(details && isDoconchainProjectCompleted(details))
-		} catch {
-			return false
-		}
+		return false
 	}
 
 	private async resolvePrincipalAndWitnessEmails(

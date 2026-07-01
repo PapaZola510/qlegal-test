@@ -120,7 +120,7 @@ export function SignedDocumentActions({
 						<Button
 							type="button"
 							size="sm"
-							title="Sealed notarized PDF from DocOnChain"
+							title="Sealed notarized PDF "
 							disabled={opening}
 							onClick={() => void handleViewNotarizedPdf()}
 						>
@@ -130,7 +130,7 @@ export function SignedDocumentActions({
 							type="button"
 							variant="outline"
 							size="sm"
-							title="Sealed notarized PDF from DocOnChain"
+							title="Sealed notarized PDF "
 							disabled={opening}
 							onClick={() => void handleDownloadNotarizedPdf()}
 						>

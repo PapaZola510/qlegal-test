@@ -446,7 +446,7 @@ export class FilesService {
 		}
 	}
 
-	/** Persist a sealed notarized PDF (from DocOnChain) under the ENP sub-org. */
+	/** Persist a sealed notarized PDF () under the ENP sub-org. */
 	async uploadNotarizedPdfBuffer(args: {
 		subOrgId: string
 		ownerUserId: string

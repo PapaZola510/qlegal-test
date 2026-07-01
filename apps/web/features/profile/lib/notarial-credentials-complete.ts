@@ -9,7 +9,7 @@ function nonEmpty(value: string | null | undefined): boolean {
 	return typeof value === "string" && value.trim().length > 0
 }
 
-/** Fields required for DocOnChain notarial seal + Supreme Court sync reminders. */
+/** Fields required for notarial seal + Supreme Court sync reminders. */
 export function listNotarialCredentialFields(profile: UserProfile): NotarialCredentialField[] {
 	return [
 		{ label: "Roll of Attorneys no.", value: profile.rollNumber },

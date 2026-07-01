@@ -10,11 +10,10 @@ import {
 	users,
 } from "@repo/db/schema"
 
-import { DoconchainAdapterService } from "@/services/doconchain/doconchain-adapter.service"
 import { db } from "@/common/database/database.client"
 import type { QlegalRole } from "@/common/session/qlegal-session.types"
 import type { V1Inputs, V1Outputs } from "@/config/contract-types"
-import { doconchainOrgEmailFallback, env } from "@/config/env.config"
+import { env } from "@/config/env.config"
 import {
 	effectiveAppRole,
 	qlegalRoleFromProfiles,
@@ -185,38 +184,9 @@ function readTxnMeta(raw: unknown): {
 export class AuthProfileService {
 	private readonly log = new Logger(AuthProfileService.name)
 
-	constructor(private readonly dc: DoconchainAdapterService) {}
+	constructor() {}
 
-	private async tryAutoJoinDoconchainOrganization(user: typeof users.$inferSelect): Promise<void> {
-		const organizationId = env.DOCONCHAIN_ORGANIZATION_ID?.trim()
-		if (!organizationId) return
 
-		const orgEmail = doconchainOrgEmailFallback()?.trim()
-		if (!orgEmail) {
-			this.log.warn(
-				`DOCONCHAIN_ORGANIZATION_ID is set but neither DOCONCHAIN_ORG_EMAIL nor DOCONCHAIN_EMAIL is set; skipping auto-join for ${user.email}`
-			)
-			return
-		}
-
-		const { firstName, lastName } = splitDisplayName(user.name)
-		const role = env.DOCONCHAIN_ORGANIZATION_MEMBER_ROLE?.trim() || "Member"
-
-		try {
-			const token = await this.dc.getAccessToken(orgEmail, { allowMock: false })
-			await this.dc.autoJoinMemberInOrganization({
-				token,
-				email: user.email,
-				firstName,
-				lastName,
-				role,
-				organizationId,
-			})
-		} catch (error) {
-			const msg = error instanceof Error ? error.message : String(error)
-			this.log.warn(`Doconchain auto-join failed for ${user.email}: ${msg}`)
-		}
-	}
 
 	async ensureClientProfile(userId: string): Promise<UserProfileDto> {
 		const [userRow] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
@@ -237,7 +207,6 @@ export class AuthProfileService {
 				createdAt: now,
 				updatedAt: now,
 			})
-			await this.tryAutoJoinDoconchainOrganization(userRow)
 		}
 
 		return this.getProfile(userId, "none")
@@ -257,7 +226,6 @@ export class AuthProfileService {
 			.where(eq(enpProfiles.userId, userId))
 			.limit(1)
 		if (enpBefore) {
-			await this.tryAutoJoinDoconchainOrganization(userRow)
 			const [clientRow] = await db
 				.select()
 				.from(clientProfiles)
@@ -297,7 +265,6 @@ export class AuthProfileService {
 			})
 		})
 
-		await this.tryAutoJoinDoconchainOrganization(userRow)
 		const [enpAfter] = await db
 			.select()
 			.from(enpProfiles)
@@ -402,9 +369,7 @@ export class AuthProfileService {
 				lastName,
 				createdAt: now,
 				updatedAt: now,
-			})
-			await this.tryAutoJoinDoconchainOrganization(userRow)
-			;[clientRow] = await db
+			})				;[clientRow] = await db
 				.select()
 				.from(clientProfiles)
 				.where(eq(clientProfiles.userId, userId))

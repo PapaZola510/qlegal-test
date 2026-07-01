@@ -20,7 +20,7 @@ export const MOCK_SCENARIO_OPTIONS = [
 	{ value: "server_error", label: "server_error" },
 	{ value: "validation_error", label: "validation_error" },
 	{ value: "slow", label: "slow — delayed responses" },
-	{ value: "dc_popup_blocked", label: "dc_popup_blocked — QuickSign / DOCONCHAIN" },
+	{ value: "dc_popup_blocked", label: "dc_popup_blocked — QuickSign" },
 	{ value: "exam_expired", label: "exam_expired — cert exam" },
 	{ value: "payment_failed", label: "payment_failed (domain-specific)" },
 ] as const

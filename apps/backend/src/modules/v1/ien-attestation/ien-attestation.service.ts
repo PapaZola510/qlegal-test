@@ -23,11 +23,9 @@ import {
 	users,
 } from "@repo/db/schema"
 
-import { DoconchainAdapterService } from "@/services/doconchain/doconchain-adapter.service"
-import { generateDoconchainSignLink } from "@/services/doconchain/generate-sign-link"
 import { db } from "@/common/database/database.client"
 import type { QlegalSessionContext } from "@/common/session/qlegal-session.types"
-import { doconchainOrgEmailFallback, env, publicAppUrl } from "@/config/env.config"
+import { publicAppUrl } from "@/config/env.config"
 
 type AppointmentRow = typeof appointments.$inferSelect
 
@@ -35,7 +33,7 @@ type AppointmentRow = typeof appointments.$inferSelect
 export class IenAttestationService {
 	private readonly log = new Logger(IenAttestationService.name)
 
-	constructor(private readonly dc: DoconchainAdapterService) {}
+	constructor() {}
 
 	buildIenSignPageUrl(
 		appointmentId: string,
@@ -242,7 +240,7 @@ export class IenAttestationService {
 			}
 		}
 
-		const signDocumentUrl = await this.resolveDoconchainSignUrl(project, apt, role, ctx.userId)
+		const signDocumentUrl = await this.resolveLocalSignUrl(project, apt, role, ctx.userId)
 		return {
 			signDocumentUrl,
 			attestationRequired: false,
@@ -548,48 +546,13 @@ export class IenAttestationService {
 		}
 	}
 
-	private async resolveDoconchainSignUrl(
+	private async resolveLocalSignUrl(
 		project: typeof quicksignProjects.$inferSelect,
 		apt: AppointmentRow,
 		role: IenAttestationRole,
 		userId: string
 	): Promise<string> {
-		const projectUuid = project.doconchainProjectUuid?.trim()
-		if (!projectUuid) {
-			throw new ORPCError("BAD_REQUEST", { message: "DocOnChain project is not ready" })
-		}
-
-		const [user] = await db
-			.select({ email: users.email })
-			.from(users)
-			.where(eq(users.id, userId))
-			.limit(1)
-		if (!user?.email) {
-			throw new ORPCError("BAD_REQUEST", { message: "Signer email is required" })
-		}
-
-		const [enp] = await db
-			.select({ email: users.email })
-			.from(enpProfiles)
-			.innerJoin(users, eq(users.id, enpProfiles.userId))
-			.where(eq(enpProfiles.userId, apt.enpUserId))
-			.limit(1)
-		const enpEmail = enp?.email?.trim()
-		if (!enpEmail) {
-			throw new ORPCError("BAD_REQUEST", { message: "ENP email is required" })
-		}
-
-		try {
-			return await generateDoconchainSignLink(this.dc, {
-				projectUuid,
-				signerEmail: user.email.trim(),
-				projectOwnerEmail: enpEmail,
-			})
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e)
-			this.log.warn(`IEN sign link fallback: ${msg.slice(0, 120)}`)
-			const app = env.DOCONCHAIN_APP_URL ?? "https://stg-app.doconchain.com"
-			return `${app.replace(/\/$/, "")}/sign/${projectUuid}`
-		}
+		// Local signing: return the IEN sign page URL
+		return this.buildIenSignPageUrl(apt.id, project.documentFileObjectId, role)
 	}
 }

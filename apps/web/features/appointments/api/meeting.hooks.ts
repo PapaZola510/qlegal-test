@@ -300,7 +300,7 @@ export function useCreateMeetingDocumentProjectMutation(appointmentId: string) {
 /**
  * Multipart upload for the principal/client during a live meeting. The file is uploaded
  * directly into the ENP's sub-org and linked to the appointment without provisioning a
- * DocOnChain project — the ENP must create the signing project later.
+ * project — the ENP must create the signing project later.
  */
 export function usePrincipalMeetingDocumentUploadMutation(appointmentId: string) {
 	const queryClient = useQueryClient()
@@ -375,7 +375,7 @@ export function useListMeetingDocumentSignersQuery(
 						completed?: boolean
 						plotCompletedAt?: string | null
 						notarizedPdfReady?: boolean
-				  }
+				 }
 				| undefined
 			if (!data?.plotCompletedAt) return 10_000
 			if (!data.completed) return 4_000

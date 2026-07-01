@@ -104,10 +104,10 @@ function resetPipelineState() {
 
 /**
  * 4-gate lobby location pipeline (mirrors quanby-legal):
- *   1. Quick VPN check (`session.locationVerification.checkVpn`) before any prompt.
- *   2. High-accuracy geolocation via the browser's Geolocation API.
- *   3. Server `verifyLocation` (Google Maps reverse-geocode + PH-only country check).
- *   4. WebRTC ICE candidate scan vs server-reported public IP.
+ *  1. Quick VPN check (`session.locationVerification.checkVpn`) before any prompt.
+ *  2. High-accuracy geolocation via the browser's Geolocation API.
+ *  3. Server `verifyLocation` (Google Maps reverse-geocode + PH-only country check).
+ *  4. WebRTC ICE candidate scan vs server-reported public IP.
  *
  * The pipeline runs only after `livenessVerified` is true so a HyperVerge redirect
  * does not race with an early GPS prompt.

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+
 import { HttpException, Injectable, Logger } from "@nestjs/common"
 import { and, eq, isNull, like } from "drizzle-orm"
 import type { Response } from "express"
@@ -15,14 +17,10 @@ import {
 	users,
 } from "@repo/db/schema"
 
-import { DoconchainAdapterService } from "@/services/doconchain/doconchain-adapter.service"
+import { LocalStorageService } from "@/services/storage/local-storage.service"
 import { db } from "@/common/database/database.client"
-import { doconchainOrgEmailFallback } from "@/config/env.config"
 import { FilesService } from "@/modules/v1/files/files.service"
-import {
-	looksLikePdfMissingDoconchainNotarialSeal,
-	looksLikePdfStrictlyMissingDoconchainNotarialSeal,
-} from "@/utils/doconchain-sealed-pdf-heuristic"
+import { stampCertificationPage } from "@/utils/stamp-certification-page"
 import { stampNotarialBookFooterOnPdf } from "@/utils/stamp-enb-entry-on-notarized-pdf"
 
 const ARCHIVE_RETRY_DELAYS_MS = [0, 3_000, 8_000, 20_000, 45_000, 90_000]
@@ -46,10 +44,10 @@ export class NotarizedPdfArchiveService {
 
 	constructor(
 		private readonly files: FilesService,
-		private readonly dc: DoconchainAdapterService
+		private readonly localStorage: LocalStorageService
 	) {}
 
-	/** Background job: fetch from DocOnChain vault and copy into our object storage (idempotent). */
+	/** Background job: fetch from Registry and copy into our object storage (idempotent). */
 	scheduleArchiveToS3(projectId: string): void {
 		void this.maybeScheduleArchive(projectId)
 	}
@@ -120,23 +118,13 @@ export class NotarizedPdfArchiveService {
 
 		let bytes = pdf
 		if (!bytes?.length) {
-			const token = await this.dc.getAccessToken(enp.email, { allowOrgFallback: false })
-			bytes =
-				(await this.dc.fetchNotarizedPdfBytes({
-					token,
-					projectUuid: row.doconchainProjectUuid.trim(),
-					tryVault: true,
-				})) ?? undefined
+			bytes = await this.localStorage.readPdf(row.id).catch(() => undefined)
 		}
 		if (!bytes?.length) return null
-		if (looksLikePdfStrictlyMissingDoconchainNotarialSeal(bytes)) {
-			this.log.debug(
-				`Notarized PDF archive skipped — DocOnChain seal not ready project=${projectId}`
-			)
-			return null
-		}
 
 		bytes = await this.stampPdfForProject(bytes, row.doconchainProjectUuid.trim())
+		const { pdf: stampedPdf } = await stampCertificationPage(bytes, row.enpUserId)
+		bytes = stampedPdf
 
 		const { fileObjectId } = await this.files.uploadNotarizedPdfBuffer({
 			subOrgId: enp.subOrgId,
@@ -186,6 +174,8 @@ export class NotarizedPdfArchiveService {
 				enpUserId: quicksignProjects.enpUserId,
 				doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
 				notarizedFileObjectId: quicksignProjects.notarizedFileObjectId,
+				appointmentId: quicksignProjects.appointmentId,
+				description: quicksignProjects.description,
 			})
 			.from(quicksignProjects)
 			.where(eq(quicksignProjects.id, quicksignProjectId))
@@ -217,7 +207,41 @@ export class NotarizedPdfArchiveService {
 		const pdfBytes = await this.resolveNotarizedPdfBytes(row, projectUuid)
 		if (pdfBytes?.length) {
 			const stamped = await this.stampPdfForProject(pdfBytes, projectUuid)
-			this.dc.streamPdfBufferToExpressResponse(res, stamped, streamOpts)
+
+			const finalHash = createHash("sha256").update(stamped).digest("hex")
+			const oldDesc = row.description ?? ""
+			if (oldDesc.includes("qlegal-hash:")) {
+				const newDesc = oldDesc.replace(/(qlegal-hash:)[^\|]*/, `$1${finalHash}`)
+				await db
+					.update(quicksignProjects)
+					.set({ description: newDesc, updatedAt: new Date() })
+					.where(eq(quicksignProjects.id, row.id))
+				if (row.appointmentId) {
+					const [actRow] = await db
+						.select({ id: registryActs.id, description: registryActs.description })
+						.from(registryActs)
+						.where(eq(registryActs.appointmentId, row.appointmentId))
+						.limit(1)
+					if (actRow?.description?.includes("qlegal-hash:")) {
+						const newActDesc = actRow.description.replace(/(qlegal-hash:)[^\|]*/, `$1${finalHash}`)
+						await db
+							.update(registryActs)
+							.set({ description: newActDesc, updatedAt: new Date() })
+							.where(eq(registryActs.id, actRow.id))
+					}
+				}
+			}
+
+			const filename = (streamOpts.filename ?? "notarized-document.pdf").trim()
+			res.setHeader("Content-Type", "application/pdf")
+			res.setHeader(
+				"Content-Disposition",
+				streamOpts.asAttachment
+					? `attachment; filename="${filename}"`
+					: `inline; filename="${filename}"`
+			)
+			res.setHeader("Cache-Control", "private, max-age=3600")
+			res.status(200).send(stamped)
 			void this.archiveQuicksignProjectPdf(row.id, stamped)
 			return
 		}
@@ -225,41 +249,15 @@ export class NotarizedPdfArchiveService {
 		throw new HttpException(
 			{
 				message:
-					"DocOnChain has not published the sealed notarized PDF yet. Wait a moment and try View again.",
+					"Notarized PDF is not available yet. Wait a moment and try again.",
 				error: {
 					code: "NOTARIZED_PDF_NOT_READY",
 					message:
-						"DocOnChain has not published the sealed notarized PDF yet. Wait a moment and try View again.",
+						"Notarized PDF is not available yet. Wait a moment and try again.",
 				},
 			},
 			425
 		)
-	}
-
-	private isValidPdfBuffer(bytes: Buffer | null | undefined): bytes is Buffer {
-		return Boolean(bytes?.length && bytes.subarray(0, 4).toString("ascii") === "%PDF")
-	}
-
-	/** DocOnChain sign-only interim PDFs have blank SC template lines but no electronic notarial block. */
-	private isSealedNotarizedPdfBytes(bytes: Buffer): boolean {
-		return !looksLikePdfMissingDoconchainNotarialSeal(bytes)
-	}
-
-	private async listDoconchainTokenCandidates(enpEmail: string): Promise<string[]> {
-		const emails = [enpEmail.trim()].filter(Boolean)
-		const org = doconchainOrgEmailFallback()?.trim()
-		if (org && !emails.some(e => e.toLowerCase() === org.toLowerCase())) {
-			emails.push(org)
-		}
-		const tokens: string[] = []
-		for (const email of emails) {
-			try {
-				tokens.push(await this.dc.getAccessToken(email, { allowOrgFallback: false }))
-			} catch {
-				/* try next email */
-			}
-		}
-		return tokens
 	}
 
 	private async resolveNotarizedPdfBytes(
@@ -268,44 +266,12 @@ export class NotarizedPdfArchiveService {
 			enpUserId: string
 			notarizedFileObjectId: string | null
 		},
-		projectUuid: string
+		_projectUuid: string
 	): Promise<Buffer | null> {
 		if (row.notarizedFileObjectId) {
 			const stored = await this.files.readStoredFileBuffer(row.notarizedFileObjectId)
-			if (this.isValidPdfBuffer(stored) && this.isSealedNotarizedPdfBytes(stored)) return stored
-			if (this.isValidPdfBuffer(stored) && !this.isSealedNotarizedPdfBytes(stored)) {
-				this.log.debug(
-					`Stored notarized PDF is interim (no DocOnChain seal) — refetching project=${projectUuid.slice(0, 8)}…`
-				)
-			}
+			if (stored?.length && stored.subarray(0, 4).toString("ascii") === "%PDF") return stored
 		}
-
-		this.scheduleArchiveToS3(row.id)
-
-		const [enp] = await db
-			.select({ email: users.email })
-			.from(enpProfiles)
-			.innerJoin(users, eq(users.id, enpProfiles.userId))
-			.where(eq(enpProfiles.userId, row.enpUserId))
-			.limit(1)
-		if (!enp?.email?.trim()) return null
-
-		const tokens = await this.listDoconchainTokenCandidates(enp.email)
-		if (!tokens.length) {
-			this.log.warn("Notarized PDF resolve: no DocOnChain token (ENP or org email)")
-			return null
-		}
-
-		for (const token of tokens) {
-			const fromDc = await this.dc.fetchNotarizedPdfBytes({
-				token,
-				projectUuid,
-				tryVault: true,
-				forceVaultScan: true,
-			})
-			if (this.isValidPdfBuffer(fromDc) && this.isSealedNotarizedPdfBytes(fromDc)) return fromDc
-		}
-
 		return null
 	}
 

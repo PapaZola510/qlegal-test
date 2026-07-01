@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common"
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto"
+import { createHash, randomBytes, timingSafeEqual, randomUUID } from "node:crypto"
 import { ORPCError } from "@orpc/server"
 import { and, count, desc, eq, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm"
 
@@ -37,7 +37,6 @@ import {
 	users,
 } from "@repo/db/schema"
 
-import { DoconchainProjectProvisionService } from "@/services/doconchain/doconchain-project-provision.service"
 import { EMAIL_ADAPTER, type EmailAdapter } from "@/services/email/email-adapter"
 import { isHitpayPaymentRequestCompleted } from "@/services/hitpay/hitpay-get-payment-request"
 import { hitpayDevSandboxTestEnabled } from "@/services/hitpay/hitpay.client"
@@ -142,7 +141,6 @@ export class AppointmentsService {
 		private readonly registry: RegistryService,
 		private readonly files: FilesService,
 		private readonly enpDocTypes: EnpDocumentTypesService,
-		private readonly doconchainProvision: DoconchainProjectProvisionService,
 		private readonly hitpay: HitpayService,
 		private readonly tlpe: TlpeService,
 		@Inject(forwardRef(() => getSessionsService()))
@@ -186,7 +184,7 @@ export class AppointmentsService {
 		}
 	}
 
-	/** Populate notarial registry from DocOnChain project details (end session only). */
+	/** Populate notarial registry from QuickSign project details (end session only). */
 	private populateNotarialRegistryOnMeetingEnd(
 		appointmentId: string,
 		enpUserId: string,
@@ -214,7 +212,7 @@ export class AppointmentsService {
 		}
 
 		void run("immediate")
-		// DocOnChain may flip project to COMPLETED seconds after the last signature.
+		// Project may flip to COMPLETED seconds after the last signature.
 		void (async () => {
 			await new Promise(resolve => setTimeout(resolve, 15_000))
 			await run("+15s")
@@ -843,7 +841,7 @@ export class AppointmentsService {
 				)
 		}
 
-		await this.ensureDoconchainProjectForMeetingDocument({
+		await this.ensureProjectForMeetingDocument({
 			enpUserId: ctx.userId,
 			ctx,
 			sessionMode: row.sessionMode,
@@ -873,7 +871,7 @@ export class AppointmentsService {
 	/**
 	 * Resolve the ENP's sub-org id for the given appointment. Used when a principal/client
 	 * uploads a meeting document — the file goes to the ENP's tenant so that downstream
-	 * DocOnChain provisioning (initiated by the ENP) has the right tenancy context.
+	 * downstream provisioning (initiated by the ENP) has the right tenancy context.
 	 */
 	async resolveEnpSubOrgIdForAppointment(appointmentId: string): Promise<{
 		appointment: typeof appointments.$inferSelect
@@ -902,7 +900,7 @@ export class AppointmentsService {
 
 	/**
 	 * Link a file uploaded by the principal/client during a live session.
-	 * No DocOnChain project is created here — the ENP must call
+	 * No QuickSign project is created here — the ENP must call
 	 * {@link createMeetingDocumentProject} explicitly before adding signers.
 	 */
 	async linkPrincipalMeetingDocument(
@@ -1029,7 +1027,7 @@ export class AppointmentsService {
 	}
 
 	/**
-	 * Provision a DocOnChain project for a meeting document that was already linked
+	 * Provision a QuickSign project for a meeting document that was already linked
 	 * (e.g. uploaded by the principal). Only the ENP for the appointment may call this.
 	 */
 	async createMeetingDocumentProject(
@@ -1119,7 +1117,7 @@ export class AppointmentsService {
 			})
 		}
 
-		await this.ensureDoconchainProjectForMeetingDocument({
+		await this.ensureProjectForMeetingDocument({
 			enpUserId: ctx.userId,
 			ctx,
 			sessionMode: row.sessionMode,
@@ -2688,24 +2686,11 @@ export class AppointmentsService {
 		}
 	}
 
-	private async resolveSubOrgIdsForEnp(
-		ctx: QlegalSessionContext,
-		enpUserId: string
-	): Promise<string[]> {
-		if (ctx.subOrgIds?.length) return ctx.subOrgIds
-		const [enp] = await db
-			.select({ subOrgId: enpProfiles.subOrgId })
-			.from(enpProfiles)
-			.where(eq(enpProfiles.userId, enpUserId))
-			.limit(1)
-		return enp ? [enp.subOrgId] : []
-	}
-
 	/**
-	 * Mint DocOnChain token for the uploading ENP email, create project from PDF, persist uuid on quicksign_projects.
-	 * `appointment_id` is left null so multiple meeting instruments per appointment are allowed (unique is per appointment on that column).
+	 * Create a local project record. `appointment_id` is left null so multiple meeting
+	 * instruments per appointment are allowed (unique is per appointment on that column).
 	 */
-	private async ensureDoconchainProjectForMeetingDocument(args: {
+	private async ensureProjectForMeetingDocument(args: {
 		enpUserId: string
 		ctx: QlegalSessionContext
 		sessionMode: "remote" | "in_person" | "hybrid"
@@ -2732,53 +2717,35 @@ export class AppointmentsService {
 			return
 		}
 
-		const subOrgIds = await this.resolveSubOrgIdsForEnp(args.ctx, args.enpUserId)
-
-		try {
-			const uuid = await this.doconchainProvision.createProjectUuidFromPdfFile({
-				enpUserId: args.enpUserId,
-				subOrgIds,
-				sessionMode: args.sessionMode,
-				fileObjectId: args.fileObjectId,
-				documentName: args.documentName,
-				logContext: "meeting.upload",
-			})
-
-			const now = new Date()
-			const qsDescription = meetingQuickSignDescription(args.documentType, args.feePhp)
-			if (existingQs) {
-				await db
-					.update(quicksignProjects)
-					.set({
-						doconchainProjectUuid: uuid,
-						title: args.documentName,
-						description: qsDescription,
-						status: "pending_signatures",
-						updatedAt: now,
-					})
-					.where(eq(quicksignProjects.id, existingQs.id))
-				return
-			}
-
-			await db.insert(quicksignProjects).values({
-				enpUserId: args.enpUserId,
-				documentFileObjectId: args.fileObjectId,
-				title: args.documentName,
-				description: qsDescription,
-				status: "pending_signatures",
-				doconchainProjectUuid: uuid,
-				appointmentId: null,
-				expiresAt: new Date(now.getTime() + 14 * 86400000),
-				createdAt: now,
-				updatedAt: now,
-			})
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e)
-			this.log.error(`meeting DocOnChain project failed file=${args.fileObjectId}: ${msg}`)
-			throw new ORPCError("BAD_REQUEST", {
-				message: `Could not create DocOnChain project: ${msg.slice(0, 280)}`,
-			})
+		const uuid = randomUUID()
+		const now = new Date()
+		const qsDescription = meetingQuickSignDescription(args.documentType, args.feePhp)
+		if (existingQs) {
+			await db
+				.update(quicksignProjects)
+				.set({
+					doconchainProjectUuid: uuid,
+					title: args.documentName,
+					description: qsDescription,
+					status: "pending_signatures",
+					updatedAt: now,
+				})
+				.where(eq(quicksignProjects.id, existingQs.id))
+			return
 		}
+
+		await db.insert(quicksignProjects).values({
+			enpUserId: args.enpUserId,
+			documentFileObjectId: args.fileObjectId,
+			title: args.documentName,
+			description: qsDescription,
+			status: "pending_signatures",
+			doconchainProjectUuid: uuid,
+			appointmentId: null,
+			expiresAt: new Date(now.getTime() + 14 * 86400000),
+			createdAt: now,
+			updatedAt: now,
+		})
 	}
 
 	private async assertEnpInSessionForMeetingDocument(

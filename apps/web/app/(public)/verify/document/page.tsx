@@ -6,7 +6,7 @@ import { VerifyDocumentContent } from "@/features/document-verification/componen
 export const metadata: Metadata = {
 	title: "Verify Notarized Document",
 	description:
-		"Verify the authenticity of a notarized document issued through Quanby Legal using DocOnChain DOC Verify.",
+		"Verify the authenticity of a notarized document issued through Quanby Legal.",
 }
 
 export default function VerifyDocumentPage() {

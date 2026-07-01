@@ -123,16 +123,6 @@ export class QuicksignController {
 		})
 	}
 
-	@Implement(v1.quicksign.retryDcProject)
-	async retryDcProject(@Req() req: Request, @Session() session: UserSession) {
-		return implement(v1.quicksign.retryDcProject).handler(async ({ input, context }) => {
-			const scenario = getMockScenario(req)
-			applyCommonScenario(scenario, "QuickSign Project")
-			const qlegal = resolveQlegalAuth(context, session, req)
-			return this.service.retryDcProject(qlegal, input.id)
-		})
-	}
-
 	@Implement(v1.quicksign.recordIenAttestation)
 	async recordIenAttestation(@Req() req: Request, @Session() session: UserSession) {
 		return implement(v1.quicksign.recordIenAttestation).handler(async ({ input, context }) => {
