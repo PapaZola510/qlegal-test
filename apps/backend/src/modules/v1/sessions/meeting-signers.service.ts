@@ -5,8 +5,8 @@ import type { Response } from "express"
 import { PDFDocument } from "pdf-lib"
 
 import type {
-	DocoChainPlotLinkResult,
-	DocoChainSignLinkResult,
+	PlotLinkResult,
+	SignLinkResult,
 	InitiateMeetingSigningResult,
 	ListMeetingDocumentSignerAssignmentsResult,
 	ListMeetingDocumentSignersResult,
@@ -628,7 +628,7 @@ export class MeetingSignersService {
 		ctx: QlegalSessionContext | null,
 		meetingId: string,
 		documentId: string
-	): Promise<DocoChainPlotLinkResult> {
+	): Promise<PlotLinkResult> {
 		if (!ctx?.userId) throw new ORPCError("UNAUTHORIZED", { message: "Authentication required" })
 
 		const apt = await this.loadAppointmentForMeeting(ctx, meetingId)
@@ -822,7 +822,7 @@ export class MeetingSignersService {
 		meetingId: string,
 		documentId: string,
 		signerEmail: string
-	): Promise<DocoChainSignLinkResult> {
+	): Promise<SignLinkResult> {
 		if (!ctx?.userId) throw new ORPCError("UNAUTHORIZED", { message: "Authentication required" })
 
 		const apt = await this.loadAppointmentForMeeting(ctx, meetingId)

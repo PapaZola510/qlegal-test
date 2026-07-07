@@ -43,7 +43,7 @@ const ENP_NAME = "Atty. Elena Reyes"
 const ENP_EMAIL = "lawyer@qlegal.local"
 const ENP_PASSWORD = "lawyer12345"
 
-/** DocOnChain seal display string — matches `enp_profiles.ibp_date` text column. */
+/** Seal display string — matches `enp_profiles.ibp_date` text column. */
 function formatIbpDateDisplay(date: Date): string {
 	const label = date.toLocaleDateString("en-US", {
 		month: "short",

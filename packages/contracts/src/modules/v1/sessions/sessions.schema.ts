@@ -232,20 +232,20 @@ export const ImportVaultFolderToMeetingResultSchema = z.object({
 	}),
 })
 
-export const EnsureDocoChainTokenInputSchema = z.object({
+export const EnsureLocalTokenInputSchema = z.object({
 	meetingId: z.string().min(1),
 })
 
-export const EnsureDocoChainTokenResultSchema = z.object({
+export const EnsureLocalTokenResultSchema = z.object({
 	ready: z.boolean(),
 })
 
-export const CreateDocoChainProjectInputSchema = z.object({
+export const CreateLocalProjectInputSchema = z.object({
 	documentId: z.string().min(1),
 	meetingId: z.string().min(1),
 })
 
-export const AddDocoChainProjectSignerInputSchema = z.object({
+export const AddLocalProjectSignerInputSchema = z.object({
 	documentId: z.string().min(1),
 	meetingId: z.string().min(1),
 	email: z.string().email(),
@@ -254,13 +254,13 @@ export const AddDocoChainProjectSignerInputSchema = z.object({
 	sequence: z.number().int().positive().default(1),
 })
 
-export const GenerateDocoChainSignLinkInputSchema = z.object({
+export const GenerateSignLinkInputSchema = z.object({
 	documentId: z.string().min(1),
 	meetingId: z.string().min(1),
 	signerEmail: z.string().email(),
 })
 
-export const GenerateDocoChainPlotLinkInputSchema = z.object({
+export const GeneratePlotLinkInputSchema = z.object({
 	documentId: z.string().min(1),
 	meetingId: z.string().min(1),
 })
@@ -288,12 +288,11 @@ export const MarkSignedForCurrentUserInputSchema = z.object({
 	signaturePngBase64: z.string().optional(),
 })
 
-export const DocoChainSignLinkResultSchema = z.object({
+export const SignLinkResultSchema = z.object({
 	signLink: z.string().url(),
 })
 
-export const DocoChainPlotLinkResultSchema = z.object({
-	// Relaxed from `.url()`: DC may return short redirect hosts before normalization.
+export const PlotLinkResultSchema = z.object({
 	plotLink: z.string().min(1),
 })
 
@@ -393,7 +392,7 @@ export const ListMeetingDocumentSignersResultSchema = z.object({
 	 * Runtime HTTPS URL to the sealed PDF (from vault `files[].file_url` or project GET).
 	 * Resolved via `doconchainProjectUuid` only — Registry list row `uuid` is never persisted.
 	 */
-	// Relaxed from `.url()`: DC occasionally returns odd-but-fetchable URLs; strict output validation surfaced as HTTP 500.
+	// Relaxed from `.url()`: local flow may produce non-standard URLs; strict output validation surfaced as HTTP 500.
 	notarizedDocumentUrl: z.string().nullable(),
 	/** QuickSign project status for this meeting document (`quicksign_projects.status`). */
 	notarizationStatus: QuicksignStatusEnum.nullable(),
@@ -416,8 +415,8 @@ export type ListMeetingDocumentSignerAssignmentsResult = z.infer<
 export type ListMeetingDocumentSignersResult = z.infer<
 	typeof ListMeetingDocumentSignersResultSchema
 >
-export type DocoChainPlotLinkResult = z.infer<typeof DocoChainPlotLinkResultSchema>
-export type DocoChainSignLinkResult = z.infer<typeof DocoChainSignLinkResultSchema>
+export type PlotLinkResult = z.infer<typeof PlotLinkResultSchema>
+export type SignLinkResult = z.infer<typeof SignLinkResultSchema>
 export type MarkMeetingDocumentPlottedResult = z.infer<
 	typeof MarkMeetingDocumentPlottedResultSchema
 >

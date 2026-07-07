@@ -481,9 +481,8 @@ export class RegistryService {
 	}
 
 	/**
-	 * Populate registry acts when a meeting ends (only trigger — no list-page DocOnChain calls).
-	 * Per document: `GET /api/v2/projects/{uuid}`; insert only when DocOnChain reports COMPLETED.
-	 * Idempotent per ENP + `doconchainProjectUuid`. PDF URLs are resolved on demand later.
+	 * Populate registry acts when a meeting ends (only trigger — no list-page external calls).
+	 * Idempotent per ENP + project UUID. PDF URLs are resolved on demand later.
 	 */
 	/** @deprecated Prefer meeting-end populate; kept for internal callers only. */
 	async syncActForCompletedNotarization(args: {
@@ -512,7 +511,7 @@ export class RegistryService {
 		 * ENB signing passes true so acts exist for principal acknowledgments during the session.
 		 */
 		allowDuringActiveSession?: boolean
-		/** When true, treat all meeting signers as signed even if DocOnChain status still lags. */
+		/** When true, treat all meeting signers as signed even if signing status still lags. */
 		allowWhenMeetingSignaturesComplete?: boolean
 	}): Promise<{ created: number; skipped: number }> {
 		const meetingEndedAt = args.meetingEndedAt ?? new Date()

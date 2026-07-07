@@ -5,11 +5,11 @@ import { locationVerificationContract } from "./location-verification.contract.j
 import {
 	CompleteSessionLivenessInputSchema,
 	CompleteSessionLivenessResponseSchema,
-	DocoChainPlotLinkResultSchema,
-	DocoChainSignLinkResultSchema,
+	PlotLinkResultSchema,
+	SignLinkResultSchema,
 	EnableGuestSignerOutputSchema,
-	GenerateDocoChainPlotLinkInputSchema,
-	GenerateDocoChainSignLinkInputSchema,
+	GeneratePlotLinkInputSchema,
+	GenerateSignLinkInputSchema,
 	InitiateMeetingSigningInputSchema,
 	InitiateMeetingSigningResultSchema,
 	InviteSessionGuestInputSchema,
@@ -226,8 +226,8 @@ export const sessionsContract = {
 			summary: "edit/draft plot link for ENP (place signature fields)",
 			tags: ["Sessions"],
 		})
-		.input(GenerateDocoChainPlotLinkInputSchema)
-		.output(DocoChainPlotLinkResultSchema),
+		.input(GeneratePlotLinkInputSchema)
+		.output(PlotLinkResultSchema),
 
 	markMeetingDocumentPlotted: oc
 		.route({
@@ -256,8 +256,8 @@ export const sessionsContract = {
 			summary: "Per-signer signing link (signer-owned token fallback)",
 			tags: ["Sessions"],
 		})
-		.input(GenerateDocoChainSignLinkInputSchema)
-		.output(DocoChainSignLinkResultSchema),
+		.input(GenerateSignLinkInputSchema)
+		.output(SignLinkResultSchema),
 
 	markSignedForCurrentUser: oc
 		.route({

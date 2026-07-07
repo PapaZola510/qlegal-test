@@ -40,7 +40,7 @@ const verifyUploadMulter = {
 }
 
 /**
- * Public HTTP endpoints for DocOnChain document verification (code JSON + multipart PDF).
+ * Public HTTP endpoints for document verification (code JSON + multipart PDF).
  */
 @Controller({ path: "verify/document", version: "1" })
 export class VerifyHttpController {

@@ -56,8 +56,8 @@ export {
 	DM_MESSAGES_DEFAULT_PAGE_SIZE,
 } from "./modules/v1/messages/messages.schema.js"
 export type {
-	DocoChainPlotLinkResult,
-	DocoChainSignLinkResult,
+	PlotLinkResult,
+	SignLinkResult,
 	InitiateMeetingSigningResult,
 	InviteSessionGuestInput,
 	JoinTokenPayload,
