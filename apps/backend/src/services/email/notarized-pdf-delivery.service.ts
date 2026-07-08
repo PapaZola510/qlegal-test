@@ -93,7 +93,7 @@ export class NotarizedPdfDeliveryService {
 				enpUserId: quicksignProjects.enpUserId,
 				title: quicksignProjects.title,
 				status: quicksignProjects.status,
-				doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
+				localProjectUuid: quicksignProjects.localProjectUuid,
 				appointmentId: quicksignProjects.appointmentId,
 				documentFileObjectId: quicksignProjects.documentFileObjectId,
 				notarizedFileObjectId: quicksignProjects.notarizedFileObjectId,
@@ -103,10 +103,10 @@ export class NotarizedPdfDeliveryService {
 			.where(eq(quicksignProjects.id, projectId))
 			.limit(1)
 
-		if (!row?.doconchainProjectUuid?.trim()) return "abort"
+		if (!row?.localProjectUuid?.trim()) return "abort"
 		if (row.notarizedPdfEmailedAt) return "done"
 
-		const projectUuid = row.doconchainProjectUuid.trim()
+		const projectUuid = row.localProjectUuid.trim()
 		const enp = await this.loadEnpRow(row.enpUserId)
 		if (!enp?.email) return "abort"
 

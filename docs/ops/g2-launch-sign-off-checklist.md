@@ -15,7 +15,7 @@
 | Cert exam + retake payment | ☐ | | | |
 | Appointments (directory, invite, inbox) | ☐ | | | |
 | Sessions + lobby (LiveKit; guest Hyperverge gate) | ☐ | | | |
-| QuickSign 4-step (DOCONCHAIN sandbox) | ☐ | | | |
+| QuickSign 4-step (local signing) | ☐ | | | |
 | Registry + draft act + SC API sync | ☐ | | | |
 | DM + Contract AI + admin dashboard | ☐ | | | |
 | Public certificate verification | ☐ | | | |
@@ -39,9 +39,9 @@
 
 ---
 
-## Launch criterion 3 — DOCONCHAIN QuickSign in staging
+## Launch criterion 3 — Local QuickSign signing (was DOCONCHAIN)
 
-**Requirement:** DOCONCHAIN QuickSign succeeds end-to-end: project creation, signer add, plotting, meeting creation, vault fetch, signed PDF retrieval.
+**Requirement:** QuickSign local signing succeeds end-to-end: project creation, signer add, plotting, meeting creation, sealed PDF retrieval. (DocOnChain has been fully removed; signing is handled locally by QLegal.)
 
 | Step | Verified | Notes |
 | --- | --- | --- |

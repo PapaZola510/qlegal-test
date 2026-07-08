@@ -357,7 +357,7 @@ export const enpProfiles = createTable("enp_profiles", t => ({
 	ptrLocation: t.text("ptr_location"),
 	ptrDate: t.timestamp("ptr_date"),
 	ibpNo: t.text("ibp_no"),
-	/** Display string for DocOnChain seal, e.g. `Dec 18, 2024 (for 2025)` */
+	/** Display string for notarial seal, e.g. `Dec 18, 2024 (for 2025)` */
 	ibpDate: t.text("ibp_date"),
 	mcleNo: t.text("mcle_no"),
 	mclePeriod: t.text("mcle_period"),
@@ -860,7 +860,7 @@ export const quicksignProjects = createTable(
 			.$type<
 				"draft" | "pending_signatures" | "partially_signed" | "completed" | "expired" | "cancelled"
 			>(),
-		doconchainProjectUuid: t.text("doconchain_project_uuid"),
+		localProjectUuid: t.text("local_project_uuid"),
 		/** JSON array of signature field positions placed by the ENP during plotting. */
 		signatureFields: t
 			.jsonb("signature_fields")
@@ -883,7 +883,7 @@ export const quicksignProjects = createTable(
 	}),
 	t => [
 		index("quicksign_projects_enp_user_id_idx").on(t.enpUserId),
-		index("quicksign_projects_doconchain_uuid_idx").on(t.doconchainProjectUuid),
+		index("quicksign_projects_local_project_uuid_idx").on(t.localProjectUuid),
 		index("quicksign_projects_notarized_file_object_id_idx").on(t.notarizedFileObjectId),
 	]
 )

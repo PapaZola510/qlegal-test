@@ -542,13 +542,13 @@ export class AppointmentsService {
 				.orderBy(desc(appointmentDocuments.createdAt))
 
 			const fileIds = [...new Set(links.map(l => l.fileObjectId))]
-			const qsByFile = new Map<string, { id: string; doconchainProjectUuid: string | null }>()
+			const qsByFile = new Map<string, { id: string; localProjectUuid: string | null }>()
 			if (fileIds.length > 0) {
 				const qsRows = await db
 					.select({
 						id: quicksignProjects.id,
 						documentFileObjectId: quicksignProjects.documentFileObjectId,
-						doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
+						localProjectUuid: quicksignProjects.localProjectUuid,
 					})
 					.from(quicksignProjects)
 					.where(
@@ -563,7 +563,7 @@ export class AppointmentsService {
 					if (!qsByFile.has(q.documentFileObjectId)) {
 						qsByFile.set(q.documentFileObjectId, {
 							id: q.id,
-							doconchainProjectUuid: q.doconchainProjectUuid,
+							localProjectUuid: q.localProjectUuid,
 						})
 					}
 				}
@@ -605,7 +605,7 @@ export class AppointmentsService {
 				if (sizeBytes !== undefined) out.sizeBytes = sizeBytes
 				if (qs) {
 					out.quicksignProjectId = qs.id
-					out.doconchainProjectUuid = qs.doconchainProjectUuid
+					out.localProjectUuid = qs.localProjectUuid
 				}
 				if (r.ownerUserId) {
 					out.uploadedByUserId = r.ownerUserId
@@ -2702,7 +2702,7 @@ export class AppointmentsService {
 		const [existingQs] = await db
 			.select({
 				id: quicksignProjects.id,
-				doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
+				localProjectUuid: quicksignProjects.localProjectUuid,
 			})
 			.from(quicksignProjects)
 			.where(
@@ -2713,7 +2713,7 @@ export class AppointmentsService {
 			)
 			.limit(1)
 
-		if (existingQs?.doconchainProjectUuid?.trim()) {
+		if (existingQs?.localProjectUuid?.trim()) {
 			return
 		}
 
@@ -2724,7 +2724,7 @@ export class AppointmentsService {
 			await db
 				.update(quicksignProjects)
 				.set({
-					doconchainProjectUuid: uuid,
+					localProjectUuid: uuid,
 					title: args.documentName,
 					description: qsDescription,
 					status: "pending_signatures",
@@ -2740,7 +2740,7 @@ export class AppointmentsService {
 			title: args.documentName,
 			description: qsDescription,
 			status: "pending_signatures",
-			doconchainProjectUuid: uuid,
+			localProjectUuid: uuid,
 			appointmentId: null,
 			expiresAt: new Date(now.getTime() + 14 * 86400000),
 			createdAt: now,

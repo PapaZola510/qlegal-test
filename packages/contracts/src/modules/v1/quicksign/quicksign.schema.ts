@@ -18,11 +18,11 @@ export const SignatureFieldSchema = z.object({
 
 /** Machine-readable codes returned on `ORPCError` via `data.quicksign.code` for UI recovery (Flow 8). */
 export const QuicksignErrorCodeSchema = z.enum([
-	"DC_PROJECT_CREATE_FAILED",
-	"DC_PROJECT_EXPIRED",
-	"DC_SIGNER_FAILED",
-	"DC_PLOT_LINK_FAILED",
-	"DC_POPUP_BLOCKED",
+	"QS_PROJECT_CREATE_FAILED",
+	"QS_PROJECT_EXPIRED",
+	"QS_SIGNER_FAILED",
+	"QS_PLOT_LINK_FAILED",
+	"QS_POPUP_BLOCKED",
 	"INVALID_STATE",
 	"FILE_NOT_ACCESSIBLE",
 	"SIGNER_NOT_REGISTERED",
@@ -41,7 +41,7 @@ export const QuicksignProjectSchema = z.object({
 	documentFileId: z.string(),
 	/** Convenience display URL (may be synthetic when no presign is embedded). */
 	documentUrl: z.string(),
-	doconchainProjectUuid: z.string().nullable(),
+	localProjectUuid: z.string().nullable(),
 	signatureFields: z.array(SignatureFieldSchema).nullable(),
 	appointmentId: z.string().nullable(),
 	plotCompletedAt: z.string().nullable(),
@@ -101,7 +101,7 @@ export const QuicksignAddSignerSchema = z.object({
 
 export const QuicksignPlotLinkResponseSchema = z.object({
 	plotLink: z.string().url(),
-	doconchainProjectUuid: z.string(),
+	localProjectUuid: z.string(),
 })
 
 export const QuicksignFinalizeSchema = z.object({
@@ -132,7 +132,7 @@ export const QuicksignPrincipalSignerStatusSchema = z.object({
 export const QuicksignFinalizeResponseSchema = z.object({
 	appointmentId: z.string(),
 	quicksignProjectId: z.string(),
-	doconchainProjectUuid: z.string().nullable(),
+	localProjectUuid: z.string().nullable(),
 	/** Lobby URL for the signer (and ENP) to join the hybrid session. */
 	clientJoinUrl: z.string().url(),
 	enpJoinUrl: z.string().url(),

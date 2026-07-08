@@ -34,7 +34,7 @@ function maxWizardStep(a: WizardStep, b: WizardStep): WizardStep {
 }
 
 function stepFromProject(project: QuicksignProject): WizardStep {
-	if (!project.doconchainProjectUuid?.trim()) return "upload"
+	if (!project.localProjectUuid?.trim()) return "upload"
 	if (project.signatories.length === 0) return "assign_signer"
 	if (!project.plotCompletedAt) return "plot_fields"
 	return "create_meeting"

@@ -18,7 +18,9 @@ This document describes onboarding for **two user types** as implemented in the 
 
 5. **Matching / intake** — **No algorithmic matching.** `GET /api/enps` lists certified attorneys; `POST /api/appointments` with `enp_id`, `notarization_type` (e.g. ACKNOWLEDGMENT, JURAT), `mode` (`REN` | `IEN`), `notes`, `title`, `preferred_time`.
 
-6. **Payment / contract** — **None** at client signup. Appointments may later reference **Doconchain** (`doconchain_project_uuid`, `doconchain_sign_link`). **₱500 retake fee** is for **failed ENP exams**, not clients.
+6. **Payment / contract** — **None** at client signup. Appointments may later reference a local signing project (`doconchain_project_uuid` — **deprecated name**, now stores the local QLegal project ID). **₱500 retake fee** is for **failed ENP exams**, not clients.
+
+> **Note:** DocOnChain is no longer used. All notarization, signing, and document sealing is fully handled locally by QLegal.
 
 7. **First action** — Dashboard → pick ENP → **pending appointment**, or **QuickSign** / other flows as exposed in UI.
 
@@ -26,7 +28,7 @@ This document describes onboarding for **two user types** as implemented in the 
 
 9. **Drop-off** — OAuth abandon; role confusion; profile friction; expectation of auto-match vs **directory** browsing; later session **camera** denial if applicable.
 
-10. **Tech hints** — Google OAuth + JWT cookies; HyperVerge used on **ENP** path; retakes **GCash/bank + manual admin confirm**; Doconchain on appointments; SMTP (Gmail).
+10. **Tech hints** — Google OAuth + JWT cookies; HyperVerge used on **ENP** path; retakes **GCash/bank + manual admin confirm**; local signing on appointments (DocOnChain deprecated); SMTP (Gmail).
 
 ```mermaid
 flowchart TD

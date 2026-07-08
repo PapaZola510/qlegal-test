@@ -369,7 +369,7 @@ function DocumentInstrumentCard({
 	const [feeDraftError, setFeeDraftError] = React.useState<string | null>(null)
 	const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
 	const serverProjectUuid =
-		signersResult?.doconchainProjectUuid?.trim() ?? attachment.doconchainProjectUuid?.trim() ?? null
+		signersResult?.localProjectUuid?.trim() ?? attachment.localProjectUuid?.trim() ?? null
 	const hasSigningProject = Boolean(serverProjectUuid)
 	const isPrincipalUpload = attachment.uploadedByPrincipal === true
 	const isCreatingProjectThis =

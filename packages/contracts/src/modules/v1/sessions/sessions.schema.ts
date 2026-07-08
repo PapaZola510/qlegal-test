@@ -387,10 +387,10 @@ export const ListMeetingDocumentSignersResultSchema = z.object({
 	/** QuickSign project internal id — used to call saveSignatureFields. */
 	projectId: z.string().nullable(),
 	/** Authoritative create-project id — always read from server, never cached client UUID. */
-	doconchainProjectUuid: z.string().nullable(),
+	localProjectUuid: z.string().nullable(),
 	/**
 	 * Runtime HTTPS URL to the sealed PDF (from vault `files[].file_url` or project GET).
-	 * Resolved via `doconchainProjectUuid` only — Registry list row `uuid` is never persisted.
+	 * Resolved via `localProjectUuid` only — Registry list row `uuid` is never persisted.
 	 */
 	// Relaxed from `.url()`: local flow may produce non-standard URLs; strict output validation surfaced as HTTP 500.
 	notarizedDocumentUrl: z.string().nullable(),

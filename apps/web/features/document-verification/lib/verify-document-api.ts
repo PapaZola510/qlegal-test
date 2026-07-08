@@ -30,8 +30,8 @@ export interface VerifyDocumentResponse {
 	verifiedAt: string
 	reason: string | null
 	message: string | null
-	doconchainProjectUuid: string | null
-	doconchainVerificationUuid: string | null
+	localProjectUuid: string | null
+	verificationUuid: string | null
 	certificateAccessKey: string | null
 	hasCertificateOfCompletion: boolean
 	verificationDetails: VerifyDetails | null

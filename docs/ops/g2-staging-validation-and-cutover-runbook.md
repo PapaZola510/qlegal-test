@@ -12,12 +12,12 @@ Execute end-to-end QA in **staging** (not localhost) for every in-scope flow. Tr
 | Cert exam + retake | Exam attempt lifecycle; payment gateway webhook for retake; admin override if applicable |
 | Appointments | Directory / find-a-notary; invite link; inbox or notification surface |
 | Sessions + lobby | LiveKit room join; guest signer path with Hyperverge gate where required |
-| QuickSign | Four-step flow against **DOCONCHAIN staging** (sandbox): project, signers, plotting, meeting, vault, signed PDF |
+| QuickSign | Four-step local signing flow: project, signers, plotting, meeting, sealed PDF |
 | Registry + SC sync | Commission check; consolidated submit; NRID/NRN persistence; PDF upload — **SC staging partner API** |
 | DM + Contract AI + admin | Direct messages; Contract AI proxy; admin dashboard (sidebar) critical paths |
 | Public cert verification | Public verification UI/API behaves per spec |
 
-Automated CI coverage: `.github/workflows/ci.yml` runs lint, typecheck, unit tests, and Playwright E2E for the web app when relevant paths change. **Staging manual / scripted QA remains authoritative** for integrations (Hyperverge, payments, LiveKit, DOCONCHAIN, SC).
+Automated CI coverage: `.github/workflows/ci.yml` runs lint, typecheck, unit tests, and Playwright E2E for the web app when relevant paths change. **Staging manual / scripted QA remains authoritative** for integrations (Hyperverge, payments, LiveKit, SC).
 
 ## 2. Integration dry-runs (launch blockers)
 
@@ -32,13 +32,16 @@ Confirm in staging logs and partner tooling:
 
 If sync fails: see **§4.1 SC sync failures**.
 
-### 2.2 DOCONCHAIN QuickSign (staging)
+### 2.2 ~~DOCONCHAIN~~ Local QuickSign signing (staging)
 
-Using DOCONCHAIN **staging** credentials (`apps/backend/.env.example` — `DOCONCHAIN_*`):
+> **Deprecated:** DocOnChain has been fully removed. QuickSign signing is now handled locally by QLegal. The steps below are retained for historical reference.
 
-- Create project; add signers; plotting links; meeting creation; vault fetch; retrieve signed PDF.
+~~Using DOCONCHAIN staging credentials (`apps/backend/.env.example` — `DOCONCHAIN_*`):~~
 
-If DOCONCHAIN is unavailable: see **§4.2 DOCONCHAIN outages**.
+- ~~Create project; add signers; plotting links; meeting creation; vault fetch; retrieve signed PDF.~~
+- **Current:** Create project → add signers → plotting → meeting creation → local PDF signing → sealed PDF retrieval.
+
+~~If DOCONCHAIN is unavailable: see §4.2 DOCONCHAIN outages.~~ Local signing has no external dependency.
 
 ## 3. Security and privacy (RA 10173 and integrations)
 
@@ -59,12 +62,15 @@ Before sign-off, complete the **Security / privacy** section in `g2-launch-sign-
 3. **Communicate**: if production and legal reporting window is affected, notify compliance / product owner per internal incident process.
 4. **Rollback app**: if a bad deploy caused regression, use **§5 Revert** to restore last known-good images; data fixes only via reviewed SQL or admin tools.
 
-### 4.2 DOCONCHAIN outages
+### 4.2 ~~DOCONCHAIN outages~~ Local signing (no external dependency)
 
-1. **User impact**: QuickSign and any session flows that call DOCONCHAIN may fail or degrade; surface clear errors in UI if not already.
-2. **Retry**: safe GETs can be retried; POSTs that create resources require idempotency keys or “check existing project” paths — follow service-layer behavior.
-3. **Vendor status**: check DOCONCHAIN status page / support channel.
-4. **Rollback app**: if outage coincided with bad deploy, use **§5 Revert**; otherwise wait for vendor recovery.
+> **Deprecated:** DocOnChain has been fully removed. This section is retained for historical reference. Local signing has no external dependency to go down.
+
+1. ~~**User impact**: QuickSign and any session flows that call DOCONCHAIN may fail or degrade; surface clear errors in UI if not already.~~
+2. ~~**Retry**: safe GETs can be retried; POSTs that create resources require idempotency keys or “check existing project” paths — follow service-layer behavior.~~
+3. ~~**Vendor status**: check DOCONCHAIN status page / support channel.~~
+4. ~~**Rollback app**: if outage coincided with bad deploy, use §5 Revert; otherwise wait for vendor recovery.~~
+5. **Current:** Signing is handled entirely locally by QLegal. If signing fails, check backend logs and local storage — no vendor dependency exists.
 
 ## 5. Revert via existing automation (no manual server patching)
 
@@ -90,7 +96,7 @@ After cutover: set **`AUTO_PROMOTE_STAGING_TO_PRODUCTION`** back to `false` (or 
 Ensure GitHub Environment **`production`** (and staging) variables/secrets are populated and smoke-tested:
 
 - Supreme Court registry: URL, API key, Cognito or auth material as required by partner.
-- DOCONCHAIN: staging vs prod URLs and keys per environment.
+- ~~DOCONCHAIN: staging vs prod URLs and keys per environment.~~ **Deprecated — no longer used.**
 - Hyperverge: app id/key, webhook secret, trusted redirect URLs.
 - LiveKit: URL, API key/secret.
 - Payment provider: keys and webhook signing secret.

@@ -130,7 +130,7 @@ export const AppointmentAttachmentSchema = z.object({
 	sizeBytes: z.number().int().nonnegative().optional(),
 	/** Latest meeting signing project for this file (ENP-owned), when present */
 	quicksignProjectId: z.string().nullable().optional(),
-	doconchainProjectUuid: z.string().nullable().optional(),
+	localProjectUuid: z.string().nullable().optional(),
 	/** User id of who uploaded the file (ENP or principal). */
 	uploadedByUserId: z.string().optional(),
 	/** True when the upload originated from the principal/client during a session. */

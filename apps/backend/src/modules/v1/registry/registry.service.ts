@@ -225,19 +225,19 @@ function formatEnpPartyName(row: {
 }
 
 const MEETING_FILE_DEDUPE_PREFIX = "qlegal-file:"
-const MEETING_DC_DEDUPE_PREFIX = "qlegal-dc:"
-const MEETING_DC_CODE_PREFIX = "qlegal-dc-code:"
+const MEETING_LOCAL_DEDUPE_PREFIX = "qlegal-dc:"
+const MEETING_LOCAL_CODE_PREFIX = "qlegal-dc-code:"
 const QLEGAL_CODE_PREFIX = "qlegal-code:"
 const QLEGAL_HASH_PREFIX = "qlegal-hash:"
 
 function registryActDescription(
-	doconchainProjectUuid: string,
+	localProjectUuid: string,
 	fileObjectId: string,
 	qlegalCode?: string | null,
 	qlegalHash?: string | null
 ): string {
 	const parts = [
-		`${MEETING_DC_DEDUPE_PREFIX}${doconchainProjectUuid.trim()}`,
+		`${MEETING_LOCAL_DEDUPE_PREFIX}${localProjectUuid.trim()}`,
 		`${MEETING_FILE_DEDUPE_PREFIX}${fileObjectId}`,
 	]
 	if (qlegalCode) parts.push(`${QLEGAL_CODE_PREFIX}${qlegalCode.trim()}`)
@@ -259,14 +259,14 @@ function parseDescriptionValue(description: string | null | undefined, prefix: s
 
 function parseRegistryActDescription(description: string | null | undefined): {
 	documentFileObjectId: string | null
-	doconchainProjectUuid: string | null
+	localProjectUuid: string | null
 	documentCode: string | null
 } {
 	if (!description?.trim()) {
-		return { documentFileObjectId: null, doconchainProjectUuid: null, documentCode: null }
+		return { documentFileObjectId: null, localProjectUuid: null, documentCode: null }
 	}
 	let documentFileObjectId: string | null = null
-	let doconchainProjectUuid: string | null = null
+	let localProjectUuid: string | null = null
 	let documentCode: string | null = null
 
 	const segments = description.includes("|") ? description.split("|") : [description]
@@ -275,14 +275,14 @@ function parseRegistryActDescription(description: string | null | undefined): {
 		if (segment.startsWith(MEETING_FILE_DEDUPE_PREFIX)) {
 			documentFileObjectId = segment.slice(MEETING_FILE_DEDUPE_PREFIX.length).trim() || null
 		}
-		if (segment.startsWith(MEETING_DC_CODE_PREFIX)) {
-			documentCode = segment.slice(MEETING_DC_CODE_PREFIX.length).trim() || null
-		} else if (segment.startsWith(MEETING_DC_DEDUPE_PREFIX)) {
-			doconchainProjectUuid = segment.slice(MEETING_DC_DEDUPE_PREFIX.length).trim() || null
+		if (segment.startsWith(MEETING_LOCAL_CODE_PREFIX)) {
+			documentCode = segment.slice(MEETING_LOCAL_CODE_PREFIX.length).trim() || null
+		} else if (segment.startsWith(MEETING_LOCAL_DEDUPE_PREFIX)) {
+			localProjectUuid = segment.slice(MEETING_LOCAL_DEDUPE_PREFIX.length).trim() || null
 		}
 	}
 
-	return { documentFileObjectId, doconchainProjectUuid, documentCode }
+	return { documentFileObjectId, localProjectUuid, documentCode }
 }
 
 function mergeDocumentCodeIntoDescription(
@@ -292,22 +292,22 @@ function mergeDocumentCodeIntoDescription(
 	const parsed = parseRegistryActDescription(description)
 	const code = documentCode.trim()
 	if (!code) return description?.trim() ?? ""
-	if (parsed.doconchainProjectUuid && parsed.documentFileObjectId) {
-		return registryActDescription(parsed.doconchainProjectUuid, parsed.documentFileObjectId, code)
+	if (parsed.localProjectUuid && parsed.documentFileObjectId) {
+		return registryActDescription(parsed.localProjectUuid, parsed.documentFileObjectId, code)
 	}
-	if (parsed.doconchainProjectUuid) {
-		return `${MEETING_DC_DEDUPE_PREFIX}${parsed.doconchainProjectUuid}|${MEETING_DC_CODE_PREFIX}${code}`
+	if (parsed.localProjectUuid) {
+		return `${MEETING_LOCAL_DEDUPE_PREFIX}${parsed.localProjectUuid}|${MEETING_LOCAL_CODE_PREFIX}${code}`
 	}
-	if (description?.includes(MEETING_DC_CODE_PREFIX)) {
+	if (description?.includes(MEETING_LOCAL_CODE_PREFIX)) {
 		return description
 			.split("|")
 			.map(part =>
-				part.trim().startsWith(MEETING_DC_CODE_PREFIX) ? `${MEETING_DC_CODE_PREFIX}${code}` : part
+				part.trim().startsWith(MEETING_LOCAL_CODE_PREFIX) ? `${MEETING_LOCAL_CODE_PREFIX}${code}` : part
 			)
 			.join("|")
 	}
 	const base = description?.trim()
-	return base ? `${base}|${MEETING_DC_CODE_PREFIX}${code}` : `${MEETING_DC_CODE_PREFIX}${code}`
+	return base ? `${base}|${MEETING_LOCAL_CODE_PREFIX}${code}` : `${MEETING_LOCAL_CODE_PREFIX}${code}`
 }
 
 function entryNumberForRow(row: typeof registryActs.$inferSelect): string {
@@ -326,7 +326,7 @@ function rowToAct(
 	appointmentPurpose: string | null = null
 ): RegistryAct {
 	const parties = row.parties as { name: string; role: string }[]
-	const { documentFileObjectId, doconchainProjectUuid, documentCode } =
+	const { documentFileObjectId, localProjectUuid, documentCode } =
 		parseRegistryActDescription(row.description)
 
 	return {
@@ -343,7 +343,7 @@ function rowToAct(
 		executedAt: executedAtToIso(row.executedAt),
 		documentUrl: row.documentUrl ?? null,
 		documentFileObjectId,
-		doconchainProjectUuid,
+		localProjectUuid,
 		documentCode,
 		scStatus: row.scStatus,
 		scSubmittedAt: toIso(row.scSubmittedAt),
@@ -596,7 +596,7 @@ export class RegistryService {
 					.orderBy(desc(quicksignProjects.createdAt))
 					.limit(1)
 
-				const projectUuid = project?.doconchainProjectUuid?.trim()
+				const projectUuid = project?.localProjectUuid?.trim()
 				if (!project || !projectUuid) {
 					skipped++
 					continue
@@ -1024,7 +1024,7 @@ export class RegistryService {
 		const [row] = await db
 			.select({
 				id: quicksignProjects.id,
-				doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
+				localProjectUuid: quicksignProjects.localProjectUuid,
 				status: quicksignProjects.status,
 				notarizedFileObjectId: quicksignProjects.notarizedFileObjectId,
 			})

@@ -268,7 +268,7 @@ export function QuickSignContent() {
 				enpDocumentTypeIds: state.documentTypeIds,
 			})
 
-			if (!project.doconchainProjectUuid) {
+			if (!project.localProjectUuid) {
 				throw new Error("project was not created. Try again.")
 			}
 
@@ -320,7 +320,7 @@ export function QuickSignContent() {
 				},
 				enpDocumentTypeIds: state.documentTypeIds,
 			})
-			if (!project.doconchainProjectUuid) {
+			if (!project.localProjectUuid) {
 				throw new Error("Project was not created. Try again.")
 			}
 			applyProjectSuccess(project.id)

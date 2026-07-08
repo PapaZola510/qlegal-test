@@ -42,7 +42,7 @@ export const RegistryActSchema = z.object({
 	/** Set for acts synced when a meeting ends (`description` includes `qlegal-file:{id}`). */
 	documentFileObjectId: z.string().nullable(),
 	/** QuickSign project UUID (`description` includes `qlegal-dc:{uuid}`). */
-	doconchainProjectUuid: z.string().nullable(),
+	localProjectUuid: z.string().nullable(),
 	/** Registry document code (`description` may include `qlegal-dc-code:{code}`). */
 	documentCode: z.string().nullable(),
 	scStatus: ScStatusEnum,

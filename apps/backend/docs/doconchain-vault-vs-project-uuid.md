@@ -1,3 +1,5 @@
+> **⚠️ Deprecated:** DocOnChain has been fully removed from the system. The `DoconchainAdapterService` no longer exists, and all notarization/signing is handled locally by QLegal. This document is retained for historical reference only.
+
 # DocOnChain: project UUID vs vault item UUID
 
 ## What we persist

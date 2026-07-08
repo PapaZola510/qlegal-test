@@ -212,7 +212,7 @@ export class QuicksignService {
 			status: row.status,
 			documentFileId: row.documentFileObjectId,
 			documentUrl: this.documentUrlPlaceholder(row.documentFileObjectId),
-			doconchainProjectUuid: row.doconchainProjectUuid,
+			localProjectUuid: row.localProjectUuid,
 			signatureFields: row.signatureFields,
 			appointmentId: row.appointmentId,
 			plotCompletedAt: row.plotCompletedAt?.toISOString() ?? null,
@@ -317,7 +317,7 @@ export class QuicksignService {
 		const [updated] = await db
 			.update(quicksignProjects)
 			.set({
-				doconchainProjectUuid: inserted.id,
+				localProjectUuid: inserted.id,
 				status: "pending_signatures",
 				updatedAt: new Date(),
 			})
@@ -387,7 +387,7 @@ export class QuicksignService {
 	async getPlotLink(
 		ctx: QlegalSessionContext | null,
 		id: string
-	): Promise<{ plotLink: string; doconchainProjectUuid: string }> {
+	): Promise<{ plotLink: string; localProjectUuid: string }> {
 		ctx = await this.assertEnp(ctx)
 		await this.assertCommissionForNotarialActs(ctx)
 		const row = await this.loadProjectForEnp(id, ctx.userId)
@@ -401,10 +401,10 @@ export class QuicksignService {
 			}
 		}
 
-		const localUuid = row.doconchainProjectUuid ?? id
+		const localUuid = row.localProjectUuid ?? id
 		const plotLink = `${publicAppUrl()}/quicksign/${id}/local-signing`
 
-		return { plotLink, doconchainProjectUuid: localUuid }
+		return { plotLink, localProjectUuid: localUuid }
 	}
 
 	private async resolveReviewClientSignerForProject(
@@ -755,7 +755,7 @@ export class QuicksignService {
 		if (row.appointmentId) {
 			throwQuicksign("INVALID_STATE", "This QuickSign project is already linked to an appointment")
 		}
-		if (!row.doconchainProjectUuid?.trim()) {
+		if (!row.localProjectUuid?.trim()) {
 			throwQuicksign("INVALID_STATE", "E-sign project is not ready yet")
 		}
 		if (input.sessionMode === "in_person") {
@@ -894,7 +894,7 @@ export class QuicksignService {
 		return {
 			appointmentId: apt.id,
 			quicksignProjectId: row.id,
-			doconchainProjectUuid: row.doconchainProjectUuid,
+			localProjectUuid: row.localProjectUuid,
 			documentFileId: row.documentFileObjectId,
 			clientJoinUrl,
 			enpJoinUrl,

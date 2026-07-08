@@ -94,14 +94,14 @@ export class NotarizedPdfArchiveService {
 				id: quicksignProjects.id,
 				enpUserId: quicksignProjects.enpUserId,
 				title: quicksignProjects.title,
-				doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
+				localProjectUuid: quicksignProjects.localProjectUuid,
 				notarizedFileObjectId: quicksignProjects.notarizedFileObjectId,
 			})
 			.from(quicksignProjects)
 			.where(eq(quicksignProjects.id, projectId))
 			.limit(1)
 
-		if (!row?.doconchainProjectUuid?.trim()) return null
+		if (!row?.localProjectUuid?.trim()) return null
 		if (row.notarizedFileObjectId) return row.notarizedFileObjectId
 
 		const [enp] = await db
@@ -122,7 +122,7 @@ export class NotarizedPdfArchiveService {
 		}
 		if (!bytes?.length) return null
 
-		bytes = await this.stampPdfForProject(bytes, row.doconchainProjectUuid.trim())
+		bytes = await this.stampPdfForProject(bytes, row.localProjectUuid.trim())
 		const { pdf: stampedPdf } = await stampCertificationPage(bytes, row.enpUserId)
 		bytes = stampedPdf
 
@@ -172,7 +172,7 @@ export class NotarizedPdfArchiveService {
 			.select({
 				id: quicksignProjects.id,
 				enpUserId: quicksignProjects.enpUserId,
-				doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
+				localProjectUuid: quicksignProjects.localProjectUuid,
 				notarizedFileObjectId: quicksignProjects.notarizedFileObjectId,
 				appointmentId: quicksignProjects.appointmentId,
 				description: quicksignProjects.description,
@@ -181,7 +181,7 @@ export class NotarizedPdfArchiveService {
 			.where(eq(quicksignProjects.id, quicksignProjectId))
 			.limit(1)
 
-		const projectUuid = row?.doconchainProjectUuid?.trim()
+		const projectUuid = row?.localProjectUuid?.trim()
 		if (!row || !projectUuid) {
 			if (row?.notarizedFileObjectId?.trim()) {
 				await this.files.pipeStoredFileToResponse(row.notarizedFileObjectId, res, {
@@ -337,7 +337,7 @@ export class NotarizedPdfArchiveService {
 		const [qs] = await db
 			.select({ documentFileObjectId: quicksignProjects.documentFileObjectId })
 			.from(quicksignProjects)
-			.where(eq(quicksignProjects.doconchainProjectUuid, projectUuid))
+			.where(eq(quicksignProjects.localProjectUuid, projectUuid))
 			.limit(1)
 		const fileId = qs?.documentFileObjectId?.trim()
 		if (!fileId) return null

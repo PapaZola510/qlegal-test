@@ -283,7 +283,7 @@ export class MeetingSignersService {
 		let [qs] = await db
 			.select({
 				id: quicksignProjects.id,
-				doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
+				localProjectUuid: quicksignProjects.localProjectUuid,
 				plotCompletedAt: quicksignProjects.plotCompletedAt,
 				status: quicksignProjects.status,
 				notarizedFileObjectId: quicksignProjects.notarizedFileObjectId,
@@ -345,7 +345,7 @@ export class MeetingSignersService {
 			const [updated] = await db
 				.select({
 					id: quicksignProjects.id,
-					doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
+					localProjectUuid: quicksignProjects.localProjectUuid,
 					plotCompletedAt: quicksignProjects.plotCompletedAt,
 					status: quicksignProjects.status,
 					notarizedFileObjectId: quicksignProjects.notarizedFileObjectId,
@@ -373,7 +373,7 @@ export class MeetingSignersService {
 			completed,
 			plotCompletedAt: qs?.plotCompletedAt?.toISOString() ?? null,
 			projectId: qs?.id?.trim() ?? null,
-			doconchainProjectUuid: qs?.doconchainProjectUuid?.trim() ?? null,
+			localProjectUuid: qs?.localProjectUuid?.trim() ?? null,
 			notarizedDocumentUrl,
 			notarizationStatus,
 			notarizedStoredInDb,
@@ -1053,7 +1053,7 @@ export class MeetingSignersService {
 		const [row] = await db
 			.select({
 				id: quicksignProjects.id,
-				doconchainProjectUuid: quicksignProjects.doconchainProjectUuid,
+				localProjectUuid: quicksignProjects.localProjectUuid,
 				plotCompletedAt: quicksignProjects.plotCompletedAt,
 				status: quicksignProjects.status,
 				notarizedPdfEmailedAt: quicksignProjects.notarizedPdfEmailedAt,
@@ -1143,7 +1143,7 @@ export class MeetingSignersService {
 		documentId: string
 		qs: {
 			id: string
-			doconchainProjectUuid: string | null
+			localProjectUuid: string | null
 			plotCompletedAt: Date | null
 		}
 		signers: { userId: string; role: MeetingSignerRole }[]

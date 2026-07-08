@@ -178,12 +178,12 @@ export function StepUpload({
 					<div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
 						<p>{error}</p>
 						<div className="mt-2 flex gap-2">
-							{(errorCode === "DC_PROJECT_CREATE_FAILED" || canRetryWithoutReupload) && (
+							{(errorCode === "QS_PROJECT_CREATE_FAILED" || canRetryWithoutReupload) && (
 								<Button size="sm" variant="outline" onClick={onRetry} disabled={isLoading}>
 									Retry (keep file)
 								</Button>
 							)}
-							{errorCode === "DC_PROJECT_EXPIRED" && (
+							{errorCode === "QS_PROJECT_EXPIRED" && (
 								<Button size="sm" variant="outline" onClick={onRecreate} disabled={isLoading}>
 									Recreate Project
 								</Button>

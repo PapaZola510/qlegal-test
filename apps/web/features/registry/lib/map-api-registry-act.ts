@@ -102,7 +102,7 @@ export function mapApiRegistryActToRow(api: RegistryActApi): RegistryAct {
 		location: formatLocation(api),
 		documentUrl: api.documentUrl ?? "",
 		documentFileObjectId: api.documentFileObjectId ?? null,
-		projectUuid: api.doconchainProjectUuid?.trim() || null,
+		projectUuid: api.localProjectUuid?.trim() || null,
 		documentCode: api.documentCode?.trim() || null,
 		scFailureReason: api.scRejectionReason,
 		scFailureTimestamp:

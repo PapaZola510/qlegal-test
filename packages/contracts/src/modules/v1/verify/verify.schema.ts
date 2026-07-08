@@ -50,9 +50,9 @@ export const VerifyDocumentResultSchema = z.object({
 	reason: z.string().nullable(),
 	message: z.string().nullable(),
 	/** QuickSign project UUID returned by DOC Verify (used for passport / certificate). */
-	doconchainProjectUuid: z.string().nullable(),
+	localProjectUuid: z.string().nullable(),
 	/** verification UUID from DOC Verify (`GET /verifications/:uuid`). */
-	doconchainVerificationUuid: z.string().nullable(),
+	verificationUuid: z.string().nullable(),
 	/** Short-lived key to stream Certificate of Completion via GET /verify/document/certificate/:key */
 	certificateAccessKey: z.string().nullable(),
 	hasCertificateOfCompletion: z.boolean(),

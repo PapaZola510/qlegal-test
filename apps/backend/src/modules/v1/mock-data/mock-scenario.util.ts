@@ -56,7 +56,7 @@ export function applyQuicksignPlotScenario(scenario: string | null): void {
 		throw new ORPCError("BAD_REQUEST", {
 			message:
 				"QuickSign plotter popup was blocked (mock scenario dc_popup_blocked). Use Open again or confirm plotting when done.",
-			data: { quicksign: { code: "DC_POPUP_BLOCKED" } },
+			data: { quicksign: { code: "QS_POPUP_BLOCKED" } },
 		} as never)
 	}
 }
