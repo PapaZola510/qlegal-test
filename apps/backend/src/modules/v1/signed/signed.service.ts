@@ -20,10 +20,12 @@ import {
 	meetingSignatureRequests,
 	paymentIntents,
 	quicksignProjects,
+	registryActs,
 } from "@repo/db/schema"
 
 import { db } from "@/common/database/database.client"
 import type { QlegalSessionContext } from "@/common/session/qlegal-session.types"
+import { parseDescriptionValue } from "@/utils/parse-description"
 import { RegistryService } from "@/modules/v1/registry/registry.service"
 import { dateToIsoOrEpoch } from "@/utils/safe-timestamp"
 
@@ -222,6 +224,23 @@ export class SignedService {
 
 		const enpNames = new Map(enpRows.map(e => [e.userId, formatEnpName(e)]))
 
+		const appointmentIds = [...new Set(completedRows.map(r => r.appointmentId))]
+		const actDescriptions = new Map<string, string | null>()
+		if (appointmentIds.length > 0) {
+			const actRows = await db
+				.select({
+					appointmentId: registryActs.appointmentId,
+					description: registryActs.description,
+				})
+				.from(registryActs)
+				.where(inArray(registryActs.appointmentId, appointmentIds))
+			for (const row of actRows) {
+				if (row.appointmentId && !actDescriptions.has(row.appointmentId)) {
+					actDescriptions.set(row.appointmentId, row.description)
+				}
+			}
+		}
+
 		const seen = new Set<string>()
 		const out: SignedDocument[] = []
 
@@ -235,6 +254,7 @@ export class SignedService {
 			const qs = qsKeys.get(`${r.enpUserId}:${r.fileObjectId}`)
 			const completedAt = qs?.completedAt ?? r.lastSignedAt ?? r.docLinkedAt ?? new Date()
 			const ctc = ctcByDocKey.get(dedupeKey)
+			const documentCode = parseDescriptionValue(actDescriptions.get(r.appointmentId), "qlegal-code:")
 
 			out.push({
 				id: dedupeKey,
@@ -247,6 +267,7 @@ export class SignedService {
 				appointmentKind: r.kind === "quicksign" ? "quicksign" : "standard",
 				notarizationType: r.notarizationType,
 				completedAt: dateToIsoOrEpoch(completedAt),
+				documentCode,
 				ctcRequest: ctc
 					? {
 							id: ctc.id,

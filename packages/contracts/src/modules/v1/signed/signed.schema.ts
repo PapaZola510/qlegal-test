@@ -39,6 +39,7 @@ export const SignedDocumentSchema = z.object({
 	appointmentKind: z.enum(["standard", "quicksign"]),
 	notarizationType: AppointmentNotarizationTypeEnum,
 	completedAt: z.string(),
+	documentCode: z.string().nullable(),
 	/** Latest certified true copy request for this document, if any. */
 	ctcRequest: SignedDocumentCtcRequestSchema.nullable(),
 })

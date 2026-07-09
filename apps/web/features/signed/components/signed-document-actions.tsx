@@ -28,6 +28,7 @@ interface SignedDocumentActionsProps {
 	appointmentId: string
 	documentFileId: string
 	documentTitle: string
+	documentCode: string | null
 	ctcRequest: SignedDocumentCtcRequest | null
 	onRequestCertifiedTrueCopy: () => void
 }
@@ -71,6 +72,7 @@ export function SignedDocumentActions({
 	appointmentId,
 	documentFileId,
 	documentTitle,
+	documentCode,
 	ctcRequest,
 	onRequestCertifiedTrueCopy,
 }: SignedDocumentActionsProps) {
@@ -138,7 +140,7 @@ export function SignedDocumentActions({
 						</Button>
 					</>
 				) : null}
-				<VerifyDocumentLink variant="ghost" size="sm">
+				<VerifyDocumentLink code={documentCode ?? undefined} variant="ghost" size="sm">
 					Verify
 				</VerifyDocumentLink>
 				{paymentDue && ctcRequest ? (

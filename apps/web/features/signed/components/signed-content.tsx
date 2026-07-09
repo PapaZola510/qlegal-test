@@ -240,6 +240,7 @@ export function SignedContent() {
 													appointmentId={doc.appointmentId}
 													documentFileId={doc.documentFileId}
 													documentTitle={doc.documentTitle}
+													documentCode={doc.documentCode}
 													ctcRequest={doc.ctcRequest}
 													onRequestCertifiedTrueCopy={() => setCtcTarget(doc)}
 												/>

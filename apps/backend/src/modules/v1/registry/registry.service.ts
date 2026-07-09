@@ -69,6 +69,7 @@ import { env } from "@/config/env.config"
 import { assertEnpCommissionAllowsNotarialActs } from "@/modules/v1/auth-profile/lib/assert-enp-commission-active"
 import { assertGovernmentIdAllowsNotarialActs } from "@/modules/v1/auth-profile/lib/assert-government-id-allows-notarial-acts"
 import { FilesService } from "@/modules/v1/files/files.service"
+import { parseDescriptionValue } from "@/utils/parse-description"
 
 import { resolveNotarizationLocationsForAppointments } from "./lib/resolve-notarization-location.js"
 
@@ -245,17 +246,7 @@ function registryActDescription(
 	return parts.join("|")
 }
 
-function parseDescriptionValue(description: string | null | undefined, prefix: string): string | null {
-	if (!description?.trim()) return null
-	for (const segment of description.split("|")) {
-		const trimmed = segment.trim()
-		if (trimmed.startsWith(prefix)) {
-			const val = trimmed.slice(prefix.length).trim()
-			return val || null
-		}
-	}
-	return null
-}
+
 
 function parseRegistryActDescription(description: string | null | undefined): {
 	documentFileObjectId: string | null
