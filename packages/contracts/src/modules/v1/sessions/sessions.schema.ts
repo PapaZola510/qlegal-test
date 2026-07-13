@@ -488,15 +488,6 @@ export const MeetingEnbSigningWsEventSchema = z.object({
 	signedCount: z.number().int().nonnegative(),
 })
 
-export const ReSignNotarizedDocumentInputSchema = z.object({
-	meetingId: z.string().min(1),
-	documentId: z.string().min(1),
-})
-
-export const ReSignNotarizedDocumentResultSchema = z.object({
-	ok: z.boolean(),
-})
-
 export type MeetingEnbSigningStatus = z.infer<typeof MeetingEnbSigningStatusSchema>
 export type MeetingEnbSignatureRequest = z.infer<typeof MeetingEnbSignatureRequestSchema>
 export type MeetingEnbSigningWsEvent = z.infer<typeof MeetingEnbSigningWsEventSchema>

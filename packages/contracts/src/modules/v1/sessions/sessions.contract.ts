@@ -30,8 +30,6 @@ import {
 	MarkSignedForCurrentUserResultSchema,
 	MeetingEnbSignatureRequestSchema,
 	MeetingEnbSigningStatusSchema,
-	ReSignNotarizedDocumentInputSchema,
-	ReSignNotarizedDocumentResultSchema,
 	MeetingIdSchema,
 	MeetingSignerParticipantSchema,
 	NotarialSessionSchema,
@@ -308,16 +306,6 @@ export const sessionsContract = {
 		})
 		.input(SignMeetingEnbEntryInputSchema)
 		.output(SignMeetingEnbEntryResultSchema),
-
-	reSignNotarizedDocument: oc
-		.route({
-			method: "POST",
-			path: "/sessions/meetings/{meetingId}/documents/{documentId}/resign",
-			summary: "Reset notarized document to pending_signatures for re-sealing (dev only)",
-			tags: ["Sessions"],
-		})
-		.input(ReSignNotarizedDocumentInputSchema)
-		.output(ReSignNotarizedDocumentResultSchema),
 
 	locationVerification: locationVerificationContract,
 }

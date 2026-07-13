@@ -506,46 +506,6 @@ export class MeetingSignersService {
 		}
 	}
 
-	async reSignNotarizedDocument(
-		ctx: QlegalSessionContext | null,
-		meetingId: string,
-		documentId: string
-	): Promise<{ ok: boolean }> {
-		if (!ctx?.userId) throw new ORPCError("UNAUTHORIZED", { message: "Authentication required" })
-
-		const apt = await this.loadAppointmentForMeeting(ctx, meetingId)
-		if (ctx.userId !== apt.enpUserId) {
-			throw new ORPCError("FORBIDDEN", { message: "Only the ENP may restart notarization" })
-		}
-
-		await this.assertDocumentOnAppointment(apt.id, documentId)
-		const qs = await this.loadQuicksignProjectForDocument(apt.enpUserId, documentId)
-		if (!qs) {
-			throw new ORPCError("BAD_REQUEST", { message: "No quicksign project found for this document" })
-		}
-
-		if (qs.status !== "completed") {
-			throw new ORPCError("BAD_REQUEST", {
-				message: "Document must be in completed status to restart",
-			})
-		}
-
-		await db
-			.update(quicksignProjects)
-			.set({
-				status: "pending_signatures",
-				notarizedFileObjectId: null,
-				description: "",
-				completedAt: null,
-				updatedAt: new Date(),
-			})
-			.where(eq(quicksignProjects.id, qs.id))
-
-		this.log.log(`reSignNotarizedDocument reset project=${qs.id.slice(0, 8)}`)
-
-		return { ok: true }
-	}
-
 	async streamMeetingDocumentNotarizedPdf(
 		ctx: QlegalSessionContext | null,
 		meetingId: string,
